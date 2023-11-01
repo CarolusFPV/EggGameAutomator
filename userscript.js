@@ -1,6 +1,5 @@
 console.log("Ovi Script Loaded");
 
-//Settings
 const postDelay = 500;
 
 //Globar variables
