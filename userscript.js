@@ -1,15 +1,3 @@
-// ==UserScript==
-// @name         OviPost 2
-// @namespace    http://tampermonkey.net/
-// @version      2.0
-// @description  Skip pressing buttons, straight up use post requests to handle actions.
-// @author       CarolusFPV
-// @match        https://ovipets.com/
-// @icon         https://www.google.com/s2/favicons?sz=64&domain=ovipets.com
-// @grant        GM_notification
-// @grant        GM_addStyle
-// ==/UserScript==
-
 console.log("Ovi Script Loaded");
 
 //Settings
