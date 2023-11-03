@@ -785,21 +785,6 @@ function findSelectNoneButtonContainer() {
 // Front End
 // ======================================================================
 
-const ELEMENT_IDS = {
-    header: "header",
-    menu: "menu",
-};
-
-const UI_SETTINGS = {
-    sidebarWidth: "180px",
-};
-
-// Set the width and position of the html element
-$("html").css({
-    position: "relative",
-    width: `calc(100% - ${UI_SETTINGS.sidebarWidth})`,
-});
-
 // Create and append the script menu if it doesn't exist
 if (!document.getElementById("scriptMenu")) {
     $("body").append(`
@@ -812,25 +797,6 @@ if (!document.getElementById("scriptMenu")) {
     </div>
   `);
 }
-
-// Add custom styles for the sidebar
-GM_addStyle(`
-    #gmRightSideBar {
-        position: fixed;
-        top: 0;
-        right: 0;
-        margin: 1ex;
-        padding: 1em;
-        background: orange;
-        width: calc(${UI_SETTINGS.sidebarWidth} - 2ex);
-    }
-    #gmRightSideBar ul {
-        margin: 0ex;
-    }
-    #gmRightSideBar a {
-        color: blue;
-    }
-`);
 
 function addCustomSelectionOptions() {
   var buttonContainer = findSelectNoneButtonContainer();
