@@ -1,7 +1,7 @@
 console.log("Ovi Script Loaded");
 
 //Settings
-const postDelay = 500;
+const postDelay = 350;
 
 //Globar variables
 var creditsEarned = 0;
@@ -642,8 +642,10 @@ async function turnCaptchaEgg(PetID, meta = null){
 
         if (modifiedMatch && modifiedMatch[1]) {
             let modifiedValue = modifiedMatch[1];
+            console.log(modifiedValue);
 
             const captcha = findCaptchaById(modifiedValue);
+            console.log(captcha);
             let answer = captcha.answer;
             let species = captcha.species
 
