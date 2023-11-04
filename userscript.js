@@ -359,48 +359,6 @@ class MassBreedModule extends OviPostModule {
 }
 const massBreedModule = new MassBreedModule();
 
-class TestModule extends OviPostModule {
-    constructor() {
-        super('Test', 'Test', () => {
-            const westernCountryCodes = [
-                // Western Europe
-                'AT', // Austria
-                'BE', // Belgium
-                'CH', // Switzerland
-                'DE', // Germany
-                'DK', // Denmark
-                'ES', // Spain
-                'FI', // Finland
-                'FR', // France
-                'GB', // United Kingdom
-                'IE', // Ireland
-                'IT', // Italy
-                'LU', // Luxembourg
-                'NL', // Netherlands
-                'NO', // Norway
-                'PT', // Portugal
-                'SE', // Sweden
-
-                // North America
-                'CA', // Canada
-                'US', // United States
-
-                // South America
-                'AR', // Argentina
-                'BR', // Brazil
-                'CL', // Chile
-                'CO', // Colombia
-                'EC', // Ecuador
-                'PE', // Peru
-            ];
-            for (const countryCode of westernCountryCodes) {
-                addEnclosure(countryCode + " balls");
-            }
-        });
-    }
-}
-
-const testModule = new TestModule();
 
 $(document).ready(function() {
     turnEggsModule.render();
