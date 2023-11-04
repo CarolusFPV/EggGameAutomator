@@ -368,7 +368,6 @@ $(document).ready(function() {
     massBreedModule.render();
     feedPetsModule.render();
     massTattooModule.render();
-    testModule.render();
 });
 
 
