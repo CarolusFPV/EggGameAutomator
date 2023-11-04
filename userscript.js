@@ -482,7 +482,7 @@ const captchaCodes = [
     new CaptchaSolver("1682925936", "Mantis", 37),
     new CaptchaSolver("1682925576", "Raptor", 30),
     new CaptchaSolver("1688175088", "Slime", 35),
-    new CaptchaSolver("1669779345", "Vulpes", 19)
+    new CaptchaSolver("1698842552", "Vulpes", 19)
 ];
 
 function findCaptchaById(id) {
