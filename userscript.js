@@ -475,7 +475,7 @@ class CaptchaSolver {
 const captchaCodes = [
     new CaptchaSolver("1630382962", "Canis", 23),
     new CaptchaSolver("1614919856", "Draconis", 3),
-    new CaptchaSolver("1677669920", "Equus", 21),
+    new CaptchaSolver("1696154571", "Equus", 21),
     new CaptchaSolver("1675234922", "Feline", 2),
     new CaptchaSolver("1688169852", "Gekko", 15),
     new CaptchaSolver("1677671012", "Lupus", 6),
@@ -638,18 +638,22 @@ async function turnCaptchaEgg(PetID, meta = null){
 
         // Use regex to find the modified value
         var modifiedRegex = /modified=(\d+)/;
-        console.log("regex: " + modifiedRegex);
         var modifiedMatch = modifiedRegex.exec(imageUrl);
-        console.log("match: " + modifiedMatch);
 
         if (modifiedMatch && modifiedMatch[1]) {
             let modifiedValue = modifiedMatch[1];
-            console.log("val: " + modifiedValue);
+
+            if(!modifiedValue){
+                console.log("Couldn't find modified value in: " + modifiedMatch);
+            }
 
             const captcha = findCaptchaById(modifiedValue);
-            console.log(captcha);
+
+            //Show in console if modified value is unknown.
             if(!captcha){
-                console.log("Error, URL: " + "https://ovipets.com/#!/?src=pets&sub=profile&pet=" + PetID);
+                console.log("Modified value [" + modifiedValue + "] is not known")
+                console.log("Error, URL: " + "https://ovipets.com/#!/?src=pets&sub=profile&pet=" + PetID)
+                return;
             }
             
             let answer = captcha.answer;
