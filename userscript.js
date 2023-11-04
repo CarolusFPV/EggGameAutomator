@@ -638,11 +638,13 @@ async function turnCaptchaEgg(PetID, meta = null){
 
         // Use regex to find the modified value
         var modifiedRegex = /modified=(\d+)/;
+        console.log("regex: " + modifiedRegex);
         var modifiedMatch = modifiedRegex.exec(imageUrl);
+        console.log("match: " + modifiedMatch);
 
         if (modifiedMatch && modifiedMatch[1]) {
             let modifiedValue = modifiedMatch[1];
-            console.log(modifiedValue);
+            console.log("val: " + modifiedValue);
 
             const captcha = findCaptchaById(modifiedValue);
             console.log(captcha);
