@@ -473,7 +473,7 @@ class CaptchaSolver {
 }
 
 const captchaCodes = [
-    new CaptchaSolver("1630382962", "Canis", 23),
+    new CaptchaSolver("1696154319", "Canis", 23),
     new CaptchaSolver("1614919856", "Draconis", 3),
     new CaptchaSolver("1696154571", "Equus", 21),
     new CaptchaSolver("1696153656", "Feline", 2),
