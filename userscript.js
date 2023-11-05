@@ -3,6 +3,7 @@
 // 2] Adjustable postDelay
 // 3] Toggle to auto accept friend requests upon page load
 // 4] Auto friend adder (also check their home page for words that indicate they don't accept random invites)
+// 5] Update credits live
 
 
 
@@ -1052,7 +1053,12 @@ function getUsernameFromJSON(json) {
 // Create and append the script menu if it doesn't exist
 if (!document.getElementById("scriptMenu")) {
     $("body").append(`
-    <div id="gmRightSideBar">
+    <div id="gmRightSideBar" style=
+        border-radius: 10px;
+        border-style: solid;
+        border-color: gray;
+        border-width: 3px;
+        >
         <ul id="scriptMenu">
           <li><a id="scriptVersion">Version: ` + version + `</a></li>
           <li><a id="statusText">Status: idle</a></li>
