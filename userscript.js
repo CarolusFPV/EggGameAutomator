@@ -4,6 +4,7 @@ console.log("Ovi Script Loaded");
 const postDelay = 350;
 
 //Globar variables
+const version = "1.0.2";
 var creditsEarned = 0;
 var startTime;
 var LastGet = Date.now();
@@ -883,6 +884,7 @@ if (!document.getElementById("scriptMenu")) {
     $("body").append(`
     <div id="gmRightSideBar">
         <ul id="scriptMenu">
+          <li><a id="scriptVersion">Version: '` + version + `</a></li>
           <li><a id="statusText">Status: idle</a></li>
           <li><a id="creditsGainedCounter">Credits Gained: 0</a></li>
           <li><a id="postQueue">Post Queue: 0</a></li>
