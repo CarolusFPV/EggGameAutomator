@@ -12,7 +12,7 @@ console.log("Ovi Script Loaded");
 const postDelay = 350;
 
 //Globar variables
-const version = "1.0.6";
+const version = "1.0.7";
 var creditsEarned = 0;
 var startTime;
 var LastGet = Date.now();
@@ -60,6 +60,7 @@ class TurnEggsModule extends OviPostModule {
                 });
             }
             setStatus("idle");
+            printAllData("oviscript_creditDB", "CreditsFromEggs");
         });
     }
 
@@ -927,6 +928,61 @@ function readIndexedDB(dbName, storeName, key) {
       }
     };
   }
+
+function printAllData(dbName, storeName) {
+    // Open the database
+    let request = indexedDB.open(dbName);
+  
+    // Handle errors
+    request.onerror = function(event) {
+      console.error("Error opening database:", event.target.errorCode);
+    };
+  
+    // Handle success
+    request.onsuccess = function(event) {
+      // Get the database object
+      let db = event.target.result;
+  
+      // Start a transaction
+      let tx = db.transaction(storeName, "readonly");
+  
+      // Get the object store
+      let store = tx.objectStore(storeName);
+  
+      // Create a cursor to iterate over the records
+      let cursor = store.openCursor();
+  
+      // Handle errors
+      cursor.onerror = function(event) {
+        console.error("Error reading data:", event.target.errorCode);
+      };
+  
+      // Handle success
+      cursor.onsuccess = function(event) {
+        // Get the cursor result
+        let result = event.target.result;
+  
+        // If the result is not null, print the record and continue
+        if (result) {
+          // Get the key and the value of the record
+          let key = result.key;
+          let value = result.value;
+  
+          // Print the record as a line to the console
+          console.log(key, value);
+  
+          // Continue to the next record
+          result.continue();
+        }
+        // If the result is null, the iteration is done
+        else {
+          console.log("All data printed.");
+        }
+      };
+    };
+  }
+  
+  
 
 
 // ======================================================================
