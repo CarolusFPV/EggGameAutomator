@@ -802,47 +802,51 @@ function writeIndexedDB(dbName, storeName, key, value) {
 // This function takes a database name, an object store name, and a key as parameters
 // It opens the database and reads the value for the given key from the object store
 // It then returns a promise that resolves with the value or rejects with an error
+// This function takes a database name, an object store name, and a key as parameters
+// It opens the database and reads the value for the given key from the object store
+// It then returns a promise that resolves with the value or rejects with an error
 function readIndexedDB(dbName, storeName, key) {
-    // Open the database
-    let request = indexedDB.open(dbName);
-
-    // Handle errors
-    request.onerror = function (event) {
-        console.error("Error opening database:", event.target.errorCode);
-    };
-
-    // Handle success
-    request.onsuccess = function (event) {
+    // Return a new promise
+    return new Promise(function(resolve, reject) {
+      // Open the database
+      let request = indexedDB.open(dbName);
+  
+      // Handle errors
+      request.onerror = function(event) {
+        reject(event.target.errorCode);
+      };
+  
+      // Handle success
+      request.onsuccess = function(event) {
         // Get the database object
         let db = event.target.result;
-
+  
         // Start a transaction
         let tx = db.transaction(storeName, "readonly");
-
+  
         // Get the object store
         let store = tx.objectStore(storeName);
-
+  
         // Read the value from the object store
         let getRequest = store.get(key);
-
-        // Return a promise that resolves with the value or rejects with an error
-        return new Promise(function (resolve, reject) {
-            // Handle errors
-            getRequest.onerror = function (event) {
-                reject(event.target.errorCode);
-            };
-
-            // Handle success
-            getRequest.onsuccess = function (event) {
-                // Get the result
-                let result = event.target.result;
-
-                // Resolve the promise with the result
-                resolve(result);
-            };
-        });
-    };
-}
+  
+        // Handle errors
+        getRequest.onerror = function(event) {
+          reject(event.target.errorCode);
+        };
+  
+        // Handle success
+        getRequest.onsuccess = function(event) {
+          // Get the result
+          let result = event.target.result;
+  
+          // Resolve the promise with the result
+          resolve(result);
+        };
+      };
+    });
+  }
+  
 
 
 // ======================================================================
