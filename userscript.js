@@ -46,7 +46,7 @@ class TurnEggsModule extends OviPostModule {
                 var eggs = await this.getEggs(friend);
                 eggCounter += eggs.length;
                 setStatus("Turning Eggs (" + friend + ")");
-                eggs.forEach(function(egg) {
+                eggs.forEach(function (egg) {
                     turnEgg(egg, friend);
                 });
             }
@@ -59,7 +59,7 @@ class TurnEggsModule extends OviPostModule {
         var ownID = getUserID();
         for (let page = 1; page < 20; page++) {
             const response = await sendGet("src=events&sub=feed&sec=friends&filter=all&Filter=all&page=" + page);
-            response.split('usr=').forEach(function(friend) {
+            response.split('usr=').forEach(function (friend) {
                 friend = friend.split('&amp').shift().split('\\').shift();
                 if (friend.length <= 20 && friend !== ownID && !friends.includes(friend)) {
                     friends.push(friend);
@@ -77,7 +77,7 @@ class TurnEggsModule extends OviPostModule {
         console.log("Get Eggs: " + userID);
         const response = await sendGet("src=pets&sub=hatchery&usr=" + userID);
         var eggs = [];
-        response.split('Turn Egg').forEach(function(egg) {
+        response.split('Turn Egg').forEach(function (egg) {
             if (!(egg.includes('to avoid') || egg.includes('exectime'))) {
                 egg = egg.split('pet=').pop().split('&').shift();
                 if (egg.length <= 10) {
@@ -95,7 +95,7 @@ class HatchEggsModule extends OviPostModule {
         super('HatchEggs', 'Hatch Eggs', async () => {
             const eggs = await this.getReadyToHatch();
 
-            eggs.forEach(function(egg) {
+            eggs.forEach(function (egg) {
                 turnEgg(egg);
             });
         });
@@ -105,7 +105,7 @@ class HatchEggsModule extends OviPostModule {
         const response = await sendGet("src=pets&sub=hatchery&usr=" + getUserID());
 
         const eggs = [];
-        response.split('Hatch Egg').forEach(function(egg) {
+        response.split('Hatch Egg').forEach(function (egg) {
             egg = egg.split('pet=').pop().split('&').shift();
             if (egg.length <= 10) {
                 eggs.push(egg);
@@ -124,7 +124,7 @@ class MassNameModule extends OviPostModule {
 
             var pets = [];
             if (document.URL.includes('sub=overview')) {
-                getSelectedPets().each(function() {
+                getSelectedPets().each(function () {
                     var petName = $(this).attr('title');
                     if (petName != name) {
                         pets.push($(this).attr('href').split('pet=').pop());
@@ -141,7 +141,7 @@ class MassNameModule extends OviPostModule {
                     alert("No pets found.");
                 }
             } else if (document.URL.includes('sub=hatchery')) {
-                $('img[width=120]').each(function() {
+                $('img[width=120]').each(function () {
                     pets.push($(this).attr('src').split('pet=').pop().split('&modified').shift());
                 });
 
@@ -159,14 +159,14 @@ class MassNameModule extends OviPostModule {
 const massNameModule = new MassNameModule();
 
 //Get tatoo data
-setInterval(function(){
+setInterval(function () {
     var updateButton = $("button:contains('Update'):not(.event-attached)");
 
     if (updateButton.length > 0) {
         console.log("Found button, attaching event.");
         updateButton.addClass("event-attached");
 
-        updateButton.click(function() {
+        updateButton.click(function () {
             var onclickValue = $(this).attr("onclick");
             console.log("Button clicked, onclick value:", onclickValue);
 
@@ -196,7 +196,7 @@ class MassTattooModule extends OviPostModule {
             // Prompt user to select an image
             tattooImage.click();
 
-            tattooImage.onchange = async function() {
+            tattooImage.onchange = async function () {
                 var file = tattooImage.files[0];
 
                 // Checking if file is selected
@@ -209,7 +209,7 @@ class MassTattooModule extends OviPostModule {
                 var binaryData;
                 await new Promise((resolve) => {
                     var reader = new FileReader();
-                    reader.onloadend = function() {
+                    reader.onloadend = function () {
                         binaryData = reader.result;
                         resolve();
                     }
@@ -217,11 +217,11 @@ class MassTattooModule extends OviPostModule {
                 });
 
                 // Convert binary string to Blob
-                var blobData = new Blob([binaryData], {type: file.type});
+                var blobData = new Blob([binaryData], { type: file.type });
 
                 var pets = [];
                 if (document.URL.includes('sub=overview')) {
-                    getSelectedPets().each(function() {
+                    getSelectedPets().each(function () {
                         pets.push($(this).attr('href').split('pet=').pop());
                     });
 
@@ -290,7 +290,7 @@ class MassDescModule extends OviPostModule {
             var text = prompt("Description:");
 
             var pets = [];
-            getSelectedPets().each(function() {
+            getSelectedPets().each(function () {
                 pets.push($(this).attr('href').split('pet=').pop());
             });
 
@@ -307,17 +307,17 @@ class MassDescModule extends OviPostModule {
 const massDescModule = new MassDescModule();
 
 class FeedPetsModule extends OviPostModule {
-  constructor() {
-    super('FeedPets', 'Feed Pets', async () => {
-      var count = 0;
-      $('li.selected').find('a.pet:not(.name)[href*="pet="]').each(function() {
-        var href = $(this).attr('href');
-        var PetID = href.split("pet=").pop();
-        feedPet(PetID);
-        count++;
-      });
-    });
-  }
+    constructor() {
+        super('FeedPets', 'Feed Pets', async () => {
+            var count = 0;
+            $('li.selected').find('a.pet:not(.name)[href*="pet="]').each(function () {
+                var href = $(this).attr('href');
+                var PetID = href.split("pet=").pop();
+                feedPet(PetID);
+                count++;
+            });
+        });
+    }
 }
 const feedPetsModule = new FeedPetsModule();
 
@@ -326,7 +326,7 @@ class MassBreedModule extends OviPostModule {
         super('MassBreed', 'Mass Breed', () => {
             function getPetIDs() {
                 var petIDs = [];
-                $('img[class="pet"]').each(function() {
+                $('img[class="pet"]').each(function () {
                     var href = $(this).attr('src');
                     if (href) {
                         petIDs.push(href.split("pet=").pop().split("&modified=").shift());
@@ -362,47 +362,35 @@ const massBreedModule = new MassBreedModule();
 class TestModule extends OviPostModule {
     constructor() {
         super('Test', 'Test', () => {
-            const westernCountryCodes = [
-                // Western Europe
-                'AT', // Austria
-                'BE', // Belgium
-                'CH', // Switzerland
-                'DE', // Germany
-                'DK', // Denmark
-                'ES', // Spain
-                'FI', // Finland
-                'FR', // France
-                'GB', // United Kingdom
-                'IE', // Ireland
-                'IT', // Italy
-                'LU', // Luxembourg
-                'NL', // Netherlands
-                'NO', // Norway
-                'PT', // Portugal
-                'SE', // Sweden
+            // Example usage
+            // Assume the database name is "creditsDB" and the object store name is "users"
+            // Assume the key is the userID and the value is an object with username and credits properties
+            // Write some data to the object store
+            writeIndexedDB("creditsDB", "test", "user1", { username: "Alice", credits: 100 });
+            writeIndexedDB("creditsDB", "test", "user2", { username: "Bob", credits: 200 });
 
-                // North America
-                'CA', // Canada
-                'US', // United States
+            // Read some data from the object store
+            // Use async/await syntax to handle the promise returned by the read function
+            (async function () {
+                // Get the username for user1
+                let username1 = await readIndexedDB("creditsDB", "test", "user1").then(function (value) {
+                    return value.username;
+                });
+                console.log("Username for user1 is", username1);
 
-                // South America
-                'AR', // Argentina
-                'BR', // Brazil
-                'CL', // Chile
-                'CO', // Colombia
-                'EC', // Ecuador
-                'PE', // Peru
-            ];
-            for (const countryCode of westernCountryCodes) {
-                addEnclosure(countryCode + " balls");
-            }
+                // Get the credits for user2
+                let credits2 = await readIndexedDB("creditsDB", "test", "user2").then(function (value) {
+                    return value.credits;
+                });
+                console.log("Credits for user2 are", credits2);
+            })();
         });
     }
 }
 
 const testModule = new TestModule();
 
-$(document).ready(function() {
+$(document).ready(function () {
     turnEggsModule.render();
     hatchEggsModule.render();
     massNameModule.render();
@@ -423,7 +411,7 @@ var failedCount = 0; //number of failed requests
 
 //Sends the server requests and handles API limiting
 function startPostQueue() {
-    setInterval(function() {
+    setInterval(function () {
         if (PostQueue.length > 0) {
             var request = PostQueue.shift();
             sendPost(request.url, request.body, request.meta)
@@ -448,8 +436,8 @@ function handlePostResponse(response, request) {
 
 
 //Displays number of request still in queue
-function startPostQueueCounter(){
-    setInterval(function() {
+function startPostQueueCounter() {
+    setInterval(function () {
         if (PostQueue.length == 0) {
             if ($("#postQueue")[0].innerHTML !== "Post Queue: 0") {
                 $("#postQueue")[0].innerHTML = "Post Queue: 0";
@@ -591,7 +579,7 @@ function turnEgg(PetID, meta = null, answer = false) {
     }
 }
 
-async function turnCaptchaEgg(PetID, meta = null){
+async function turnCaptchaEgg(PetID, meta = null) {
     const data = await sendGet("src=pets&sub=profile&pet=" + PetID);
     let json = data.substring(data.indexOf('{'), data.lastIndexOf('}') + 1);
 
@@ -622,7 +610,7 @@ async function turnCaptchaEgg(PetID, meta = null){
         var elapsedTime = (Date.now() - startTime) / 60000;
         var creditsPerMinute = (creditsEarned / elapsedTime).toFixed(2);
 
-        $("#creditsGainedCounter")[0].innerHTML = "Credits Gained: " + creditsEarned + " ("+ creditsPerMinute + " c/m)";
+        $("#creditsGainedCounter")[0].innerHTML = "Credits Gained: " + creditsEarned + " (" + creditsPerMinute + " c/m)";
     }
 
     // Use regex to find the img src within the action attribute
@@ -643,26 +631,26 @@ async function turnCaptchaEgg(PetID, meta = null){
         if (modifiedMatch && modifiedMatch[1]) {
             let modifiedValue = modifiedMatch[1];
 
-            if(!modifiedValue){
+            if (!modifiedValue) {
                 console.log("Couldn't find modified value in: " + modifiedMatch);
             }
 
             const captcha = findCaptchaById(modifiedValue);
 
             //Show in console if modified value is unknown.
-            if(!captcha){
+            if (!captcha) {
                 console.log("Modified value [" + modifiedValue + "] is not known")
                 console.log("Error, URL: " + "https://ovipets.com/#!/?src=pets&sub=profile&pet=" + PetID)
                 return;
             }
-            
+
             let answer = captcha.answer;
             let species = captcha.species
 
-            if(answer && species){
-                console.log('--Question PetID: ' + PetID +' Species: ' + species + " modifiedID: " + modifiedValue + " Answer Value: " + answer + " Credits: " + credits + " Total Credits Earned: " + creditsEarned);
+            if (answer && species) {
+                console.log('--Question PetID: ' + PetID + ' Species: ' + species + " modifiedID: " + modifiedValue + " Answer Value: " + answer + " Credits: " + credits + " Total Credits Earned: " + creditsEarned);
                 turnEgg(PetID, meta, answer);
-            }else{
+            } else {
                 alert("Couldn't solve captcha. PetID: " + PetID + " Species: " + species + " answer: " + answer + " modifiedID: " + modifiedValue);
                 console.log("--Couldn't solve captcha. PetID: " + PetID + " Species: " + species + " answer: " + answer + " modifiedID: " + modifiedValue);
             }
@@ -709,7 +697,7 @@ function tagPet(PetID, TagID, Text) {
     });
 }
 
-function acceptAllFriendRequests(){
+function acceptAllFriendRequests() {
     PostQueue.push({
         url: 'https://ovipets.com/cmd.php',
         body: {
@@ -768,13 +756,102 @@ async function sendGet(params) {
     return responseText;
 }
 
+//=====================================================
+//  IndexedDB wrapper
+//=====================================================
+
+// This function takes a database name, an object store name, a key, and a value as parameters
+// It opens the database and creates the object store if it doesn't exist
+// It then writes the key-value pair to the object store
+function writeIndexedDB(dbName, storeName, key, value) {
+    // Open the database
+    let request = indexedDB.open(dbName);
+
+    // Handle errors
+    request.onerror = function (event) {
+        console.error("Error opening database:", event.target.errorCode);
+    };
+
+    // Handle success
+    request.onsuccess = function (event) {
+        // Get the database object
+        let db = event.target.result;
+
+        // Start a transaction
+        let tx = db.transaction(storeName, "readwrite");
+
+        // Get the object store
+        let store = tx.objectStore(storeName);
+
+        // Write the value to the object store
+        store.put(value, key);
+    };
+
+    // Handle database upgrade
+    request.onupgradeneeded = function (event) {
+        // Get the database object
+        let db = event.target.result;
+
+        // Create the object store if it doesn't exist
+        if (!db.objectStoreNames.contains(storeName)) {
+            db.createObjectStore(storeName);
+        }
+    };
+}
+
+// This function takes a database name, an object store name, and a key as parameters
+// It opens the database and reads the value for the given key from the object store
+// It then returns a promise that resolves with the value or rejects with an error
+function readIndexedDB(dbName, storeName, key) {
+    // Open the database
+    let request = indexedDB.open(dbName);
+
+    // Handle errors
+    request.onerror = function (event) {
+        console.error("Error opening database:", event.target.errorCode);
+    };
+
+    // Handle success
+    request.onsuccess = function (event) {
+        // Get the database object
+        let db = event.target.result;
+
+        // Start a transaction
+        let tx = db.transaction(storeName, "readonly");
+
+        // Get the object store
+        let store = tx.objectStore(storeName);
+
+        // Read the value from the object store
+        let getRequest = store.get(key);
+
+        // Return a promise that resolves with the value or rejects with an error
+        return new Promise(function (resolve, reject) {
+            // Handle errors
+            getRequest.onerror = function (event) {
+                reject(event.target.errorCode);
+            };
+
+            // Handle success
+            getRequest.onsuccess = function (event) {
+                // Get the result
+                let result = event.target.result;
+
+                // Resolve the promise with the result
+                resolve(result);
+            };
+        });
+    };
+}
+
+
 // ======================================================================
 // JQuery and Regex (stuff that might change over time..)
 // ======================================================================
 
 //Returns a list of PetID's of pets you currently have selected.
 function getSelectedPets() {
-  return $('li.selected').find('a.pet:not(.name)[href*="pet="]');
+    return $('li.selected').find('a.pet:not(.name)[href*="pet="]');
 }
 
 //Returns a list of PetID's that are currently loaded.
@@ -783,7 +860,7 @@ function getSelectedPets() {
 //  They will stay loaded during the session, even if you are not currently looking at the enclosure.
 //  The only way to unload them is to refresh the page.
 //  Best to stay away from using this since it may result into unexpected behaviour.
-function getLoadedPetIDs(){
+function getLoadedPetIDs() {
     return $('img[class="pet"]');
 }
 
@@ -811,47 +888,47 @@ if (!document.getElementById("scriptMenu")) {
 }
 
 function addCustomSelectionOptions() {
-  var buttonContainer = findSelectNoneButtonContainer();
+    var buttonContainer = findSelectNoneButtonContainer();
 
-  if (buttonContainer.length > 0) {
-    // Element found, add the button
-    addCustomSelectionButtons();
-  } else {
-    // Element not found, wait and try again
-    setTimeout(addCustomSelectionOptions, 100);
-  }
+    if (buttonContainer.length > 0) {
+        // Element found, add the button
+        addCustomSelectionButtons();
+    } else {
+        // Element not found, wait and try again
+        setTimeout(addCustomSelectionOptions, 100);
+    }
 }
 
 function addCustomSelectionButtons() {
-  console.log("Adding custom selection buttons");
-  var selectNoneButton = $('.ui-input.btn button:contains("Select None")');
+    console.log("Adding custom selection buttons");
+    var selectNoneButton = $('.ui-input.btn button:contains("Select None")');
 
-  var buttonConfigs = [
-    {
-      text: "Test",
-      handler: function() {
-        alert("Test button clicked");
-      }
-    },
-    {
-      text: "Hide Bred",
-      handler: function() {
-        // Your logic to hide bred elements here
-      }
-    }
-    // Add more button configurations as needed
-  ];
+    var buttonConfigs = [
+        {
+            text: "Test",
+            handler: function () {
+                alert("Test button clicked");
+            }
+        },
+        {
+            text: "Hide Bred",
+            handler: function () {
+                // Your logic to hide bred elements here
+            }
+        }
+        // Add more button configurations as needed
+    ];
 
-  // Iterate over the button configurations and create the buttons
-  buttonConfigs.forEach(function(config) {
-    var button = $('<button>').attr('type', 'button').addClass('ui-button ui-corner-all ui-widget').text(config.text);
+    // Iterate over the button configurations and create the buttons
+    buttonConfigs.forEach(function (config) {
+        var button = $('<button>').attr('type', 'button').addClass('ui-button ui-corner-all ui-widget').text(config.text);
 
-    // Insert the button next to the Select None button
-    selectNoneButton.after(button);
+        // Insert the button next to the Select None button
+        selectNoneButton.after(button);
 
-    // Add click event handler for the button
-    button.click(config.handler);
-  });
+        // Add click event handler for the button
+        button.click(config.handler);
+    });
 }
 
 
