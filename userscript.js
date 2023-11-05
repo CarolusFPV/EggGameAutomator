@@ -12,7 +12,7 @@ console.log("Ovi Script Loaded");
 const postDelay = 350;
 
 //Globar variables
-const version = "1.0.3";
+const version = "1.0.4";
 var creditsEarned = 0;
 var startTime;
 var LastGet = Date.now();
@@ -591,7 +591,7 @@ function turnEgg(PetID, meta = null, answer = false) {
 async function turnCaptchaEgg(PetID, meta = null) {
     const data = await sendGet("src=pets&sub=profile&pet=" + PetID);
     let json = data.substring(data.indexOf('{'), data.lastIndexOf('}') + 1);
-
+    console.log(json);
     var jsonObject = JSON.parse(json);
     var htmlString = jsonObject.output;
 
