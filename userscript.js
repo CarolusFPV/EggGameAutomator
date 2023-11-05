@@ -1,3 +1,11 @@
+//Todo
+// 1] Credit counter per friend to ignore friends that don't usually get you credits
+// 2] Adjustable postDelay
+// 3] Toggle to auto accept friend requests upon page load
+// 4] Auto friend adder (also check their home page for words that indicate they don't accept random invites)
+
+
+
 console.log("Ovi Script Loaded");
 
 //Settings
@@ -367,8 +375,8 @@ class TestModule extends OviPostModule {
             // Assume the database name is "creditsDB" and the object store name is "users"
             // Assume the key is the userID and the value is an object with username and credits properties
             // Write some data to the object store
-            writeIndexedDB("creditsDB", "test", "user1", { username: "Alice", credits: 100 });
-            writeIndexedDB("creditsDB", "test", "user2", { username: "Bob", credits: 200 });
+            writeIndexedDB("oviscript_creditDB", "CreditsFromEggs", "user1", { username: "Alice", credits: 100 });
+            writeIndexedDB("oviscript_creditDB", "test", "user2", { username: "Bob", credits: 200 });
 
             // Read some data from the object store
             // Use async/await syntax to handle the promise returned by the read function
@@ -650,6 +658,8 @@ async function turnCaptchaEgg(PetID, meta = null) {
 
             if (answer && species) {
                 console.log('--Question PetID: ' + PetID + ' Species: ' + species + " modifiedID: " + modifiedValue + " Answer Value: " + answer + " Credits: " + credits + " Total Credits Earned: " + creditsEarned);
+                let userCredits = addToUserCredits(userID, credits);
+                console.log("Total credits from user: " + userCredits);
                 turnEgg(PetID, meta, answer);
             } else {
                 alert("Couldn't solve captcha. PetID: " + PetID + " Species: " + species + " answer: " + answer + " modifiedID: " + modifiedValue);
@@ -848,6 +858,79 @@ function readIndexedDB(dbName, storeName, key) {
     });
   }
   
+  function addToUserCredits(userID, credits) {
+    let totCreditsForUser = -1;
+
+    // Open the database
+    let request = indexedDB.open("oviscript_creditDB");
+  
+    // Handle errors
+    request.onerror = function(event) {
+      console.error("Error opening database:", event.target.errorCode);
+    };
+  
+    // Handle success
+    request.onsuccess = function(event) {
+      // Get the database object
+      let db = event.target.result;
+  
+      // Start a transaction
+      let tx = db.transaction("CreditsFromEggs", "readwrite");
+  
+      // Get the object store
+      let store = tx.objectStore("CreditsFromEggs");
+  
+      // Check if the user already exists in the object store
+      let getRequest = store.get(userID);
+  
+      // Handle errors
+      getRequest.onerror = function(event) {
+        console.error("Error checking user:", event.target.errorCode);
+      };
+  
+      // Handle success
+      getRequest.onsuccess = function(event) {
+        // Get the result
+        let result = event.target.result;
+  
+        // If the user exists, update the credits
+        if (result) {
+          // Get the current amount of credits
+          let currentCredits = result.credits;
+  
+          // Add the new amount of credits
+          let newCredits = currentCredits + credits;
+          totCreditsForUser = newCredits;
+  
+          // Update the record with the new amount of credits
+          result.credits = newCredits;
+  
+          // Write the updated record to the object store
+          store.put(result, userID);
+        }
+        // If the user does not exist, create a new record
+        else {
+          // Create a new record with the given amount of credits
+          let record = {username: userID, credits: credits};
+  
+          // Write the new record to the object store
+          store.put(record, userID);
+        }
+      };
+      return totCreditsForUser;
+    };
+  
+    // Handle database upgrade
+    request.onupgradeneeded = function(event) {
+      // Get the database object
+      let db = event.target.result;
+  
+      // Create the object store if it doesn't exist
+      if (!db.objectStoreNames.contains("CreditsFromEggs")) {
+        db.createObjectStore("CreditsFromEggs");
+      }
+    };
+  }
 
 
 // ======================================================================
@@ -884,7 +967,7 @@ if (!document.getElementById("scriptMenu")) {
     $("body").append(`
     <div id="gmRightSideBar">
         <ul id="scriptMenu">
-          <li><a id="scriptVersion">Version: '` + version + `</a></li>
+          <li><a id="scriptVersion">Version: ` + version + `</a></li>
           <li><a id="statusText">Status: idle</a></li>
           <li><a id="creditsGainedCounter">Credits Gained: 0</a></li>
           <li><a id="postQueue">Post Queue: 0</a></li>
