@@ -745,12 +745,12 @@ function findSelectNoneButtonContainer() {
 // Create and append the script menu if it doesn't exist
 if (!document.getElementById("scriptMenu")) {
     $("body").append(`
-    <div id="gmRightSideBar" style=
+    <div id="gmRightSideBar" style="
         border-radius: 10px;
         border-style: solid;
         border-color: gray;
         border-width: 3px;
-        >
+        ">
         <ul id="scriptMenu">
           <li><a id="statusText">Status: idle</a></li>
           <li><a id="creditsGainedCounter">Credits Gained: 0</a></li>
