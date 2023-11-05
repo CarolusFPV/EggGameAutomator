@@ -12,7 +12,7 @@ console.log("Ovi Script Loaded");
 const postDelay = 350;
 
 //Globar variables
-const version = "1.0.5";
+const version = "1.0.6";
 var creditsEarned = 0;
 var startTime;
 var LastGet = Date.now();
@@ -963,11 +963,8 @@ function getUsernameFromJSON(json) {
     // Define the regex pattern
     let pattern = /\$\(\'title\'\)\.html\(\"(.*?)\s*\|/;
   
-    // Get the output property from the JSON object
-    let output = json.output;
-  
     // Test the pattern on the output string
-    let match = pattern.exec(output);
+    let match = pattern.exec(json);
   
     // If there is a match, return the first captured group
     if (match) {
@@ -983,11 +980,8 @@ function getUsernameFromJSON(json) {
     // Define the regex pattern
     let pattern = /usr=(\d+)&amp/;
   
-    // Get the output property from the JSON object
-    let output = json.output;
-  
     // Test the pattern on the output string
-    let match = pattern.exec(output);
+    let match = pattern.exec(json);
   
     // If there is a match, return the first captured group
     if (match) {
