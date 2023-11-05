@@ -591,9 +591,7 @@ function turnEgg(PetID, meta = null, answer = false) {
 async function turnCaptchaEgg(PetID, meta = null) {
     const data = await sendGet("src=pets&sub=profile&pet=" + PetID);
     let json = data.substring(data.indexOf('{'), data.lastIndexOf('}') + 1);
-    let username = getUsernameFromJSON(json);
     let userID = getUserIDFromJSON(json);
-    console.log("Username: " + username + " UserID: " + userID);
     var jsonObject = JSON.parse(json);
     var htmlString = jsonObject.output;
 
@@ -660,8 +658,7 @@ async function turnCaptchaEgg(PetID, meta = null) {
 
             if (answer && species) {
                 console.log('--Question PetID: ' + PetID + ' Species: ' + species + " modifiedID: " + modifiedValue + " Answer Value: " + answer + " Credits: " + credits + " Total Credits Earned: " + creditsEarned);
-                let userCredits = addToUserCredits(userID, credits);
-                console.log("Total credits from user: " + userCredits);
+                addToUserCredits(userID, credits);
                 turnEgg(PetID, meta, answer);
             } else {
                 alert("Couldn't solve captcha. PetID: " + PetID + " Species: " + species + " answer: " + answer + " modifiedID: " + modifiedValue);
@@ -861,8 +858,6 @@ function readIndexedDB(dbName, storeName, key) {
   }
   
   function addToUserCredits(userID, credits) {
-    let totCreditsForUser = -1;
-
     // Open the database
     let request = indexedDB.open("oviscript_creditDB");
   
@@ -902,7 +897,7 @@ function readIndexedDB(dbName, storeName, key) {
   
           // Add the new amount of credits
           let newCredits = currentCredits + credits;
-          totCreditsForUser = newCredits;
+          console.log("Total Credits gained from: " + userID + " = " + newCredits + " credits")
   
           // Update the record with the new amount of credits
           result.credits = newCredits;
@@ -919,7 +914,6 @@ function readIndexedDB(dbName, storeName, key) {
           store.put(record, userID);
         }
       };
-      return totCreditsForUser;
     };
   
     // Handle database upgrade
