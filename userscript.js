@@ -12,7 +12,7 @@ console.log("Ovi Script Loaded");
 const postDelay = 350;
 
 //Globar variables
-const version = "1.0.4";
+const version = "1.0.5";
 var creditsEarned = 0;
 var startTime;
 var LastGet = Date.now();
@@ -591,7 +591,9 @@ function turnEgg(PetID, meta = null, answer = false) {
 async function turnCaptchaEgg(PetID, meta = null) {
     const data = await sendGet("src=pets&sub=profile&pet=" + PetID);
     let json = data.substring(data.indexOf('{'), data.lastIndexOf('}') + 1);
-    console.log(json);
+    let username = getUsernameFromJSON(json);
+    let userID = getUserIDFromJSON(json);
+    console.log("Username: " + username + " UserID: " + userID);
     var jsonObject = JSON.parse(json);
     var htmlString = jsonObject.output;
 
@@ -956,6 +958,47 @@ function getLoadedPetIDs() {
 function findSelectNoneButtonContainer() {
     return $('.ui-fieldset-body:visible').find('button:contains("Select None")').closest('.ui-fieldset-body:visible');
 }
+
+function getUsernameFromJSON(json) {
+    // Define the regex pattern
+    let pattern = /\$\(\'title\'\)\.html\(\"(.*?)\s*\|/;
+  
+    // Get the output property from the JSON object
+    let output = json.output;
+  
+    // Test the pattern on the output string
+    let match = pattern.exec(output);
+  
+    // If there is a match, return the first captured group
+    if (match) {
+      return match[1];
+    }
+    // If there is no match, return an empty string
+    else {
+      return "";
+    }
+  }
+
+  function getUserIDFromJSON(json) {
+    // Define the regex pattern
+    let pattern = /usr=(\d+)&amp/;
+  
+    // Get the output property from the JSON object
+    let output = json.output;
+  
+    // Test the pattern on the output string
+    let match = pattern.exec(output);
+  
+    // If there is a match, return the first captured group
+    if (match) {
+      return match[1];
+    }
+    // If there is no match, return an empty string
+    else {
+      return "";
+    }
+  }
+  
 
 
 // ======================================================================
