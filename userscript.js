@@ -32,7 +32,7 @@ class OviPostModule {
         const button = $(`#${buttonId}`);
         button.on('click', function() {
           button.css('background-color', 'lime');
-          this.clickHandler();
+          clickHandler();
           button.css('background-color', '');
         });
       }
