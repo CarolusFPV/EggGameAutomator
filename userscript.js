@@ -10,14 +10,12 @@
 
 console.log("Ovi Script Loaded");
 
-//Settings
-const postDelay = await readIndexedDB("oviscript","settings","postDelay");
-
 //Globar variables
 const version = "1.0.11";
 var creditsEarned = 0;
 var startTime;
 var LastGet = Date.now();
+var postDelay = 350;
 
 class OviPostModule {
     constructor(name, buttonText, clickHandler) {
@@ -501,7 +499,6 @@ function findCaptchaById(id) {
     return captchaCodes.find((captcha) => captcha.id === id);
 }
 
-
 function setStatus(newStatus) {
     $("#statusText")[0].innerHTML = "Status: " + newStatus;
 }
@@ -761,8 +758,6 @@ async function sendPost(url, body, meta = null) {
     return { 'res': text, 'meta': meta };
 }
 
-
-
 async function sendGet(params) {
 
     while ((Date.now() - LastGet) < postDelay) {
@@ -996,9 +991,6 @@ function printAllData(dbName, storeName) {
     };
   }
 
-  
-
-
 // ======================================================================
 // JQuery and Regex (stuff that might change over time..)
 // ======================================================================
@@ -1143,12 +1135,20 @@ function addCustomSelectionButtons() {
 // Initiator
 // ======================================================================
 
-function startMacro() {
+async function startMacro() {
+    await loadSettings();
+
     startPostQueue();
 
     startPostQueueCounter();
 
     addCustomSelectionOptions();
+}
+
+async function loadSettings(){
+    await readIndexedDB("oviscript","settings","postDelay").then(function (value) {
+        postDelay = value;
+    });
 }
 
 startMacro();
