@@ -786,68 +786,49 @@ async function sendGet(params) {
 function writeIndexedDB(dbName, storeName, key, value) {
     // Open the database
     let request = indexedDB.open(dbName);
-
+  
     // Handle errors
-    request.onerror = function (event) {
-        console.error("Error opening database:", event.target.errorCode);
+    request.onerror = function(event) {
+      console.error("Error opening database:", event.target.errorCode);
     };
-
+  
     // Handle success
-    request.onsuccess = function (event) {
-        // Get the database object
-        let db = event.target.result;
-
-        // Start a transaction
-        let tx = db.transaction(storeName, "readwrite");
-
-        // Get the object store
-        let store = tx.objectStore(storeName);
-
-        // Write the value to the object store
-        store.put(value, key);
+    request.onsuccess = function(event) {
+      // Get the database object
+      let db = event.target.result;
+  
+      // Start a transaction
+      let tx = db.transaction(storeName, "readwrite");
+  
+      // Get the object store
+      let store = tx.objectStore(storeName);
+  
+      // Write the value to the object store
+      store.put(value, key);
+  
+      // Close the transaction
+      tx.oncomplete = function() {
+        db.close();
+      };
     };
-
-    function writeIndexedDB(dbName, storeName, key, value) {
-    // Open the database
-    let request = indexedDB.open(dbName);
-
-    // Handle errors
-    request.onerror = function (event) {
-        console.error("Error opening database:", event.target.errorCode);
-    };
-
-    // Handle success
-    request.onsuccess = function (event) {
-        // Get the database object
-        let db = event.target.result;
-
-        // Start a transaction
-        let tx = db.transaction(storeName, "readwrite");
-
-        // Get the object store
-        let store = tx.objectStore(storeName);
-
-        // Write the value to the object store
-        store.put(value, key);
-    };
-
+  
     // Handle database upgrade
-  request.onupgradeneeded = function(event) {
-    // Get the database object
-    let db = event.target.result;
-
-    // Create the object store if it doesn't exist
-    if (!db.objectStoreNames.contains(storeName)) {
-      db.createObjectStore(storeName);
-    }
-
-    // Continue with the transaction
-    let tx = event.target.transaction;
-    let store = tx.objectStore(storeName);
-    store.put(value, key);
-  };
-}
-}
+    request.onupgradeneeded = function(event) {
+      // Get the database object
+      let db = event.target.result;
+  
+      // Create the object store if it doesn't exist
+      if (!db.objectStoreNames.contains(storeName)) {
+        db.createObjectStore(storeName);
+      }
+  
+      // Continue with the transaction
+      let tx = event.target.transaction;
+      let store = tx.objectStore(storeName);
+      store.put(value, key);
+    };
+  }
+  
 
 // This function takes a database name, an object store name, and a key as parameters
 // It opens the database and reads the value for the given key from the object store
