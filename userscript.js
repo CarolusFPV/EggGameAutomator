@@ -11,10 +11,10 @@
 console.log("Ovi Script Loaded");
 
 //Settings
-const postDelay = 350;
+const postDelay = await readIndexedDB("oviscript","settings","postDelay");
 
 //Globar variables
-const version = "1.0.9";
+const version = "1.0.11";
 var creditsEarned = 0;
 var startTime;
 var LastGet = Date.now();
@@ -425,10 +425,11 @@ $(document).ready(function () {
 var PostQueue = [];
 var successCount = 0; //number of successfull requests
 var failedCount = 0; //number of failed requests
+let postQueueInterval;
 
 //Sends the server requests and handles API limiting
 function startPostQueue() {
-    setInterval(function () {
+    postQueueInterval = setInterval(function () {
         if (PostQueue.length > 0) {
             var request = PostQueue.shift();
             sendPost(request.url, request.body, request.meta)
@@ -436,6 +437,12 @@ function startPostQueue() {
         }
     }, postDelay);
 }
+
+function updatePostDelay(newDelay) {
+    postDelay = newDelay;
+    clearInterval(postQueueInterval);
+    startPostQueue();
+  }
 
 function handlePostResponse(response, request) {
     if (response.meta != null) {
@@ -988,7 +995,7 @@ function printAllData(dbName, storeName) {
       };
     };
   }
-  
+
   
 
 
@@ -1074,6 +1081,16 @@ if (!document.getElementById("scriptMenu")) {
         </ul>
     </div>
   `);
+  const inputElement = document.getElementById('inpPostDelay');
+    inputElement.addEventListener('input', function() {
+        const inputValue = inputElement.value;
+        const numericValue = inputValue.replace(/[^0-9]/g, '');
+        inputElement.value = numericValue;
+        if(numericValue > 10 && numericValue){
+            writeIndexedDB("oviscript","settings","postDelay",numericValue);
+            updatePostDelay(numericValue);
+        }
+    });
 }
 
 function addCustomSelectionOptions() {
