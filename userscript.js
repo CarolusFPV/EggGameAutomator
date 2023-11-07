@@ -14,7 +14,7 @@ console.log("Ovi Script Loaded");
 const postDelay = 350;
 
 //Globar variables
-const version = "1.0.8";
+const version = "1.0.9";
 var creditsEarned = 0;
 var startTime;
 var LastGet = Date.now();
@@ -32,7 +32,7 @@ class OviPostModule {
         const button = $(`#${buttonId}`);
         button.on('click', function() {
           button.css('background-color', 'lime');
-          clickHandler();
+          button.click(this.clickHandler);
           button.css('background-color', '');
         });
       }
