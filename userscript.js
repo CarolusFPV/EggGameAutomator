@@ -1,9 +1,10 @@
 //Todo
-// 1] Credit counter per friend to ignore friends that don't usually get you credits
+//Credit counter per friend to ignore friends that don't usually get you credits
 // 2] Adjustable postDelay
 // 3] Toggle to auto accept friend requests upon page load
 // 4] Auto friend adder (also check their home page for words that indicate they don't accept random invites)
 // 5] Update credits live
+//Instead of showing status also turn background-color of the buttons to lime
 
 
 
@@ -13,7 +14,7 @@ console.log("Ovi Script Loaded");
 const postDelay = 350;
 
 //Globar variables
-const version = "1.0.7";
+const version = "1.0.8b";
 var creditsEarned = 0;
 var startTime;
 var LastGet = Date.now();
@@ -28,8 +29,13 @@ class OviPostModule {
     render() {
         const buttonId = `btn${this.name}`;
         $("#scriptMenu").append(`<li><input type="button" value="${this.buttonText}" id="${buttonId}"/></li>`);
-        $(`#${buttonId}`).click(this.clickHandler);
-    }
+        const button = $(`#${buttonId}`);
+        button.on('click', function() {
+          button.css('background-color', 'lime');
+          this.clickHandler();
+          button.css('background-color', '');
+        });
+      }
 }
 
 
