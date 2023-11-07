@@ -14,7 +14,7 @@ console.log("Ovi Script Loaded");
 const postDelay = 350;
 
 //Globar variables
-const version = "1.0.8b";
+const version = "1.0.8";
 var creditsEarned = 0;
 var startTime;
 var LastGet = Date.now();
@@ -1070,6 +1070,7 @@ if (!document.getElementById("scriptMenu")) {
           <li><a id="statusText">Status: idle</a></li>
           <li><a id="creditsGainedCounter">Credits Gained: 0</a></li>
           <li><a id="postQueue">Post Queue: 0</a></li>
+          <li><a>Post Delay:  </a><input type="text" id="inpPostDelay" style="width: 40px;"><a>ms</a></li>
         </ul>
     </div>
   `);
