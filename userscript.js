@@ -9,7 +9,11 @@
 console.log("Ovi Script Loaded");
 
 //Globar variables
-const version = "1.0.23";
+const version = "1.0.24";
+
+const creditDB = new DatabaseHandler("oviscript_creditDB", "CreditsFromEggs");
+const settingsDB = new DatabaseHandler("oviscript","settings");
+  
 var creditsEarned = 0;
 var startTime;
 var LastGet = Date.now();
@@ -63,7 +67,6 @@ class TurnEggsModule extends OviPostModule {
                 });
             }
             setStatus("idle");
-            printAllData("oviscript_creditDB", "CreditsFromEggs");
         });
     }
 
@@ -116,7 +119,7 @@ class TurnEggsQuickModule extends OviPostModule {
         super('TurnEggsQuick', 'Turn Eggs (Quick)', async () => {
             creditsEarned = 0;
             startTime = Date.now()
-            const friends = await this.getSortedUserIDs("oviscript_creditDB","CreditsFromEggs");
+            const friends = await this.getSortedUserIDs();
             var eggCounter = 0;
             var friendCounter = 0;
             while (friends.length > 0) {
@@ -127,50 +130,50 @@ class TurnEggsQuickModule extends OviPostModule {
                 friendCounter++;
                 var eggs = await this.getEggs(friend);
                 eggCounter += eggs.length;
-                setStatus("Turning (Q) Eggs (" + friend + ")");
+                setStatus("Turning Eggs (" + friend + ")");
                 eggs.forEach(function (egg) {
                     turnEgg(egg, friend);
                 });
             }
             setStatus("idle");
-            printAllData("oviscript_creditDB", "CreditsFromEggs");
         });
     }
 
     async getSortedUserIDs(dbName, storeName) {
+        const creditDB = new DatabaseHandler(dbName, storeName);
+      
         return new Promise(async (resolve, reject) => {
           try {
             // Open the IndexedDB database
-            const db = await new Promise((resolve, reject) => {
-              const request = indexedDB.open(dbName);
-              request.onerror = (event) => reject("Error opening database");
-              request.onsuccess = (event) => resolve(event.target.result);
+            await creditDB.openDatabase();
+      
+            // Execute the complex query using the DatabaseHandler
+            await creditDB.executeComplexQuery(async (objectStore, resolve, reject) => {
+              // Get all keys (userIDs) from the store
+              const userIDs = await new Promise((resolve, reject) => {
+                const getAllKeysRequest = objectStore.getAllKeys();
+                getAllKeysRequest.onsuccess = (event) => resolve(event.target.result);
+                getAllKeysRequest.onerror = (event) => reject("Error getting keys from store");
+              });
+      
+              // Sort the userIDs based on credits in descending order
+              userIDs.sort(async (a, b) => {
+                const creditsA = (await creditDB.read(a)).credits;
+                const creditsB = (await creditDB.read(b)).credits;
+                return creditsB - creditsA;
+              });
+      
+              resolve(userIDs);
             });
-      
-            // Open a transaction to the store
-            const transaction = db.transaction([storeName], "readonly");
-            const store = transaction.objectStore(storeName);
-      
-            // Get all keys (userIDs) from the store
-            const userIDs = await new Promise((resolve, reject) => {
-              const getAllKeysRequest = store.getAllKeys();
-              getAllKeysRequest.onsuccess = (event) => resolve(event.target.result);
-              getAllKeysRequest.onerror = (event) => reject("Error getting keys from store");
-            });
-      
-            // Sort the userIDs based on credits in descending order
-            userIDs.sort((a, b) => {
-              const creditsA = store.get(a).credits;
-              const creditsB = store.get(b).credits;
-              return creditsB - creditsA;
-            });
-      
-            resolve(userIDs);
           } catch (error) {
             reject(error);
+          } finally {
+            // Close the database after the operation is completed
+            creditDB.closeDatabase();
           }
         });
       }
+      
       
 
     async getEggs(userID) {
@@ -870,259 +873,156 @@ async function sendGet(params) {
 //  IndexedDB wrapper
 //=====================================================
 
-// This function takes a database name, an object store name, a key, and a value as parameters
-// It opens the database and creates the object store if it doesn't exist
-// It then writes the key-value pair to the object store
-async function writeIndexedDB(dbName, storeName, key, value) {
-    return new Promise((resolve, reject) => {
-      let request = indexedDB.open(dbName);
+class DatabaseHandler {
+    constructor(dbName, storeName) {
+      this.dbName = dbName;
+      this.storeName = storeName;
+      this.db = null;
+    }
   
-      request.onerror = function (event) {
-        console.error("Error opening database:", event.target.errorCode);
-        reject(event.target.errorCode);
-      };
+    openDatabase() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(this.dbName, 1);
   
-      request.onsuccess = async function (event) {
-        let db = event.target.result;
+        request.onerror = (event) => {
+          reject("Error opening database");
+        };
   
-        // Check if the database connection is still open
-        if (db && db.readyState === "done") {
-          // Check if the object store exists, create it if needed
-          if (!db.objectStoreNames.contains(storeName)) {
-            try {
-              let version = db.version + 1;
-              db.close();
-              let upgradeRequest = indexedDB.open(dbName, version);
-              upgradeRequest.onupgradeneeded = function (event) {
-                let upgradedDB = event.target.result;
-                upgradedDB.createObjectStore(storeName);
-              };
-              await new Promise((resolve, reject) => {
-                upgradeRequest.onsuccess = resolve;
-                upgradeRequest.onerror = reject;
-              });
-            } catch (error) {
-              console.error("Error creating object store:", error);
-              reject(error);
-              return;
-            }
+        request.onsuccess = (event) => {
+          this.db = event.target.result;
+          resolve();
+        };
+  
+        request.onupgradeneeded = (event) => {
+          const db = event.target.result;
+          if (!db.objectStoreNames.contains(this.storeName)) {
+            db.createObjectStore(this.storeName, { keyPath: "userID" });
+          }
+        };
+      });
+    }
+  
+    closeDatabase() {
+      if (this.db) {
+        this.db.close();
+        this.db = null;
+      }
+    }
+  
+    async read(key) {
+      return new Promise(async (resolve, reject) => {
+        try {
+          if (!this.db) {
+            await this.openDatabase();
           }
   
-          // Use an asynchronous function to open a transaction
-          let openTransaction = async () => {
-            return new Promise((resolve, reject) => {
-              let tx;
-              try {
-                tx = db.transaction(storeName, "readwrite");
-              } catch (error) {
-                reject(error);
-                return;
-              }
+          const transaction = this.db.transaction([this.storeName], "readonly");
+          const objectStore = transaction.objectStore(this.storeName);
   
-              tx.oncomplete = () => resolve();
-              tx.onerror = () => reject(tx.error);
+          const request = objectStore.get(key);
   
-              let store = tx.objectStore(storeName);
-              store.put(value, key);
-            });
+          request.onsuccess = (event) => {
+            const result = event.target.result;
+            resolve(result);
           };
   
-          // Execute the transaction
-          openTransaction()
-            .then(() => {
-              // Close the database
-              db.close();
-              resolve();
-            })
-            .catch((error) => {
-              console.error("Error writing to object store:", error);
-              reject(error);
-            });
-        } else {
-          console.error("Database connection is closed.");
-          reject(new Error("Database connection is closed."));
+          request.onerror = (event) => {
+            reject("Error reading from database");
+          };
+        } catch (error) {
+          reject(error);
+        } finally {
+          this.closeDatabase();
         }
-      };
-    });
+      });
+    }
+  
+    async write(key, data) {
+      return new Promise(async (resolve, reject) => {
+        try {
+          if (!this.db) {
+            await this.openDatabase();
+          }
+  
+          const transaction = this.db.transaction([this.storeName], "readwrite");
+          const objectStore = transaction.objectStore(this.storeName);
+  
+          const request = objectStore.put({ userID: key, ...data });
+  
+          request.onsuccess = (event) => {
+            resolve();
+          };
+  
+          request.onerror = (event) => {
+            reject("Error writing to database");
+          };
+        } catch (error) {
+          reject(error);
+        } finally {
+          this.closeDatabase();
+        }
+      });
+    }
+  
+    async executeComplexQuery(queryCallback) {
+      return new Promise(async (resolve, reject) => {
+        try {
+          if (!this.db) {
+            await this.openDatabase();
+          }
+  
+          const transaction = this.db.transaction([this.storeName], "readonly");
+          const objectStore = transaction.objectStore(this.storeName);
+  
+          await queryCallback(objectStore, resolve, reject);
+        } catch (error) {
+          reject(error);
+        } finally {
+          this.closeDatabase();
+        }
+      });
+    }
   }
   
+  async function addToUserCredits(userID, credits) {
   
-  
-  
-  
+    try {
+      await creditDB.performDatabaseOperation(async (db) => {
 
-// This function takes a database name, an object store name, and a key as parameters
-// It opens the database and reads the value for the given key from the object store
-// It then returns a promise that resolves with the value or rejects with an error
-// This function takes a database name, an object store name, and a key as parameters
-// It opens the database and reads the value for the given key from the object store
-// It then returns a promise that resolves with the value or rejects with an error
-function readIndexedDB(dbName, storeName, key) {
-    // Return a new promise
-    return new Promise(function(resolve, reject) {
-      // Open the database
-      let request = indexedDB.open(dbName);
-  
-      // Handle errors
-      request.onerror = function(event) {
-        reject(event.target.errorCode);
-      };
-  
-      // Handle success
-      request.onsuccess = function(event) {
-        // Get the database object
-        let db = event.target.result;
-  
-        // Start a transaction
-        let tx = db.transaction(storeName, "readonly");
-  
-        // Get the object store
-        let store = tx.objectStore(storeName);
-  
-        // Read the value from the object store
-        let getRequest = store.get(key);
-  
-        // Handle errors
-        getRequest.onerror = function(event) {
-          reject(event.target.errorCode);
-        };
-  
-        // Handle success
-        getRequest.onsuccess = function(event) {
-          // Get the result
-          let result = event.target.result;
-  
-          // Resolve the promise with the result
-          resolve(result);
-        };
-      };
-    });
-  }
-  
-  function addToUserCredits(userID, credits) {
-    // Open the database
-    let request = indexedDB.open("oviscript_creditDB");
-  
-    // Handle errors
-    request.onerror = function(event) {
-      console.error("Error opening database:", event.target.errorCode);
-    };
-  
-    // Handle success
-    request.onsuccess = function(event) {
-      // Get the database object
-      let db = event.target.result;
-  
-      // Start a transaction
-      let tx = db.transaction("CreditsFromEggs", "readwrite");
-  
-      // Get the object store
-      let store = tx.objectStore("CreditsFromEggs");
-  
-      // Check if the user already exists in the object store
-      let getRequest = store.get(userID);
-  
-      // Handle errors
-      getRequest.onerror = function(event) {
-        console.error("Error checking user:", event.target.errorCode);
-      };
-  
-      // Handle success
-      getRequest.onsuccess = function(event) {
-        // Get the result
-        let result = event.target.result;
+        // Check if the user already exists in the object store
+        const existingRecord = await creditDB.read(userID);
   
         // If the user exists, update the credits
-        if (result) {
+        if (existingRecord) {
           // Get the current amount of credits
-          let currentCredits = result.credits;
+          let currentCredits = existingRecord.credits;
   
           // Add the new amount of credits
           let newCredits = currentCredits + credits;
-          console.log("Total Credits gained from: " + userID + " = " + newCredits + " credits")
   
           // Update the record with the new amount of credits
-          result.credits = newCredits;
+          existingRecord.credits = newCredits;
   
           // Write the updated record to the object store
-          store.put(result, userID);
+          await creditDB.write(userID, existingRecord);
         }
         // If the user does not exist, create a new record
         else {
           // Create a new record with the given amount of credits
-          let record = {username: userID, credits: credits};
+          let record = { username: userID, credits: credits };
   
           // Write the new record to the object store
-          store.put(record, userID);
+          await creditDB.write(userID, record);
         }
-      };
-    };
-  
-    // Handle database upgrade
-    request.onupgradeneeded = function(event) {
-      // Get the database object
-      let db = event.target.result;
-  
-      // Create the object store if it doesn't exist
-      if (!db.objectStoreNames.contains("CreditsFromEggs")) {
-        db.createObjectStore("CreditsFromEggs");
-      }
-    };
+      });
+    } catch (error) {
+      console.error("Error adding credits:", error);
+    } finally {
+      // Close the database after the operation is completed
+      creditDB.closeDatabase();
+    }
   }
-
-function printAllData(dbName, storeName) {
-    // Open the database
-    let request = indexedDB.open(dbName);
   
-    // Handle errors
-    request.onerror = function(event) {
-      console.error("Error opening database:", event.target.errorCode);
-    };
-  
-    // Handle success
-    request.onsuccess = function(event) {
-      // Get the database object
-      let db = event.target.result;
-  
-      // Start a transaction
-      let tx = db.transaction(storeName, "readonly");
-  
-      // Get the object store
-      let store = tx.objectStore(storeName);
-  
-      // Create a cursor to iterate over the records
-      let cursor = store.openCursor();
-  
-      // Handle errors
-      cursor.onerror = function(event) {
-        console.error("Error reading data:", event.target.errorCode);
-      };
-  
-      // Handle success
-      cursor.onsuccess = function(event) {
-        // Get the cursor result
-        let result = event.target.result;
-  
-        // If the result is not null, print the record and continue
-        if (result) {
-          // Get the key and the value of the record
-          let key = result.key;
-          let value = result.value;
-  
-          // Print the record as a line to the console
-          console.log(key, value);
-  
-          // Continue to the next record
-          result.continue();
-        }
-        // If the result is null, the iteration is done
-        else {
-          console.log("All data printed.");
-        }
-      };
-    };
-  }
-
 // ======================================================================
 // JQuery and Regex (stuff that might change over time..)
 // ======================================================================
@@ -1289,10 +1189,12 @@ async function startMacro() {
 }
 
 async function loadSettings() {
+    const key = "postDelay";
+  
     return new Promise(async (resolve, reject) => {
       try {
-        // Read the value from the database
-        let value = await readIndexedDB("oviscript", "settings", "postDelay");
+        // Read the value from the database using the DatabaseHandler
+        let value = await settingsDB.read(key);
   
         // If the value exists, set the global variable and resolve the promise
         if (value !== undefined && value !== null) {
@@ -1304,7 +1206,7 @@ async function loadSettings() {
           resolve();
         } else {
           // If the value doesn't exist, write the default value
-          await writeIndexedDB("oviscript", "settings", "postDelay", defaultPostDelay);
+          await settingsDB.write(key, 350);
   
           // Set the global variable to the default value
           postDelay = defaultPostDelay;
@@ -1319,10 +1221,11 @@ async function loadSettings() {
         // Handle errors, you might want to log or reject the promise
         console.error("Error loading settings:", error);
         reject(error);
+      } finally {
+        // Close the database after the operation is completed
+        settingsDB.closeDatabase();
       }
     });
   }
   
-  
-
 startMacro();
