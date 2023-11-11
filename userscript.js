@@ -9,7 +9,7 @@
 console.log("Ovi Script Loaded");
 
 //Globar variables
-const version = "1.0.25";
+const version = "1.0.26";
 
 let creditDB;
 let settingsDB;
