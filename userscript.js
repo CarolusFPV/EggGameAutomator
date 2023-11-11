@@ -151,18 +151,19 @@ class TurnEggsQuickModule extends OviPostModule {
             const transaction = db.transaction([storeName], "readonly");
             const store = transaction.objectStore(storeName);
       
-            // Get all records from the store
-            const sortedUserIDs = await new Promise((resolve, reject) => {
-              const getAllRequest = store.getAll();
-              getAllRequest.onsuccess = (event) => resolve(event.target.result);
-              getAllRequest.onerror = (event) => reject("Error getting records from store");
+            // Get all keys (userIDs) from the store
+            const userIDs = await new Promise((resolve, reject) => {
+              const getAllKeysRequest = store.getAllKeys();
+              getAllKeysRequest.onsuccess = (event) => resolve(event.target.result);
+              getAllKeysRequest.onerror = (event) => reject("Error getting keys from store");
             });
       
-            // Sort the records based on credits in descending order
-            sortedUserIDs.sort((a, b) => b.credits - a.credits);
-      
-            // Extract and return only the userIDs
-            const userIDs = sortedUserIDs.map((record) => record.userID);
+            // Sort the userIDs based on credits in descending order
+            userIDs.sort((a, b) => {
+              const creditsA = store.get(a).credits;
+              const creditsB = store.get(b).credits;
+              return creditsB - creditsA;
+            });
       
             resolve(userIDs);
           } catch (error) {
@@ -170,6 +171,7 @@ class TurnEggsQuickModule extends OviPostModule {
           }
         });
       }
+      
 
     async getEggs(userID) {
         console.log("Get Eggs: " + userID);
