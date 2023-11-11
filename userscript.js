@@ -9,7 +9,7 @@
 console.log("Ovi Script Loaded");
 
 //Globar variables
-const version = "1.0.39";
+const version = "1.0.40";
 
 let creditDB;
 let settingsDB;
@@ -144,21 +144,27 @@ class TurnEggsQuickModule extends OviPostModule {
           try {
             const userIDs = await creditDB.executeComplexQuery(async (objectStore, resolve, reject) => {
               const getAllKeysRequest = objectStore.getAllKeys();
-              getAllKeysRequest.onsuccess = async (event) => {
-                const sortedUserIDs = await Promise.all(event.target.result.map(async (userID) => ({
+              getAllKeysRequest.onsuccess = (event) => {
+                const sortedUserIDs = event.target.result;
+      
+                // Fetch credits for each user in parallel
+                const fetchCreditsPromises = sortedUserIDs.map(async (userID) => ({
                   userID,
                   credits: (await creditDB.read(userID)).credits
-                })));
+                }));
       
-                sortedUserIDs.sort((a, b) => b.credits - a.credits);
+                // Resolve with sorted user IDs and credits
+                Promise.all(fetchCreditsPromises).then((sortedUserIDs) => {
+                  sortedUserIDs.sort((a, b) => b.credits - a.credits);
       
-                // Log user IDs and corresponding credits to the console
-                sortedUserIDs.forEach(({ userID, credits }) => {
-                  console.log(`UserID: ${userID}, Credits: ${credits}`);
+                  // Log user IDs and corresponding credits to the console
+                  sortedUserIDs.forEach(({ userID, credits }) => {
+                    console.log(`UserID: ${userID}, Credits: ${credits}`);
+                  });
+      
+                  // Resolve with sorted user IDs
+                  resolve(sortedUserIDs.map(({ userID }) => userID));
                 });
-      
-                // Resolve with sorted user IDs
-                resolve(sortedUserIDs.map(({ userID }) => userID));
               };
               getAllKeysRequest.onerror = (event) => reject("Error getting keys from store");
             });
@@ -167,6 +173,7 @@ class TurnEggsQuickModule extends OviPostModule {
           }
         });
       }
+      
       
       
       
