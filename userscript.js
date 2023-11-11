@@ -9,7 +9,7 @@
 console.log("Ovi Script Loaded");
 
 //Globar variables
-const version = "1.0.40";
+const version = "1.0.41";
 
 let creditDB;
 let settingsDB;
@@ -122,10 +122,12 @@ class TurnEggsQuickModule extends OviPostModule {
             const friends = await this.getSortedUserIDs();
             var eggCounter = 0;
             var friendCounter = 0;
+            console.log("Before while loop");
             while (friends.length > 0) {
                 while (PostQueue.length > 0) {
                     await new Promise(r => setTimeout(r, 50));
                 }
+                console.log("Inside while loop");
                 var friend = friends.pop();
                 friendCounter++;
                 var eggs = await this.getEggs(friend);
@@ -135,9 +137,11 @@ class TurnEggsQuickModule extends OviPostModule {
                     turnEgg(egg, friend);
                 });
             }
+            console.log("After while loop");
             setStatus("idle");
         });
     }
+    
 
     async getSortedUserIDs() {
         return new Promise(async (resolve, reject) => {
