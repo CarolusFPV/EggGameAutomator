@@ -9,7 +9,7 @@
 console.log("Ovi Script Loaded");
 
 //Globar variables
-const version = "1.0.29";
+const version = "1.0.30";
 
 let creditDB;
 let settingsDB;
@@ -899,6 +899,7 @@ class DatabaseHandler {
       
           request.onupgradeneeded = (event) => {
             const db = event.target.result;
+            console.log("Upgrade needed during database opening");
             if (!db.objectStoreNames.contains(this.storeName)) {
               db.createObjectStore(this.storeName, { keyPath: "userID" });
               console.log("Object store created");
@@ -911,6 +912,7 @@ class DatabaseHandler {
           };
         });
       }
+      
       
   
     closeDatabase() {
@@ -1132,20 +1134,25 @@ if (!document.getElementById("scriptMenu")) {
   `);
 
   const inputElement = document.getElementById('inpPostDelay');
-const btnSaveSettings = document.getElementById('btnSaveSettings');
-
-let inputValue = ""; // Initialize the variable to store the input value
-
-inputElement.addEventListener('input', function() {
-    inputValue = inputElement.value.replace(/[^0-9]/g, ''); // Update the inputValue when the input changes
-});
-
-btnSaveSettings.addEventListener('click', function() {
-    if (inputValue > 10 && inputValue !== "") {
-        writeIndexedDB("oviscript", "settings", "postDelay", inputValue);
-        updatePostDelay(inputValue);
-    }
-});
+  const btnSaveSettings = document.getElementById('btnSaveSettings');
+  
+  let inputValue = ""; // Initialize the variable to store the input value
+  
+  inputElement.addEventListener('input', function() {
+      inputValue = inputElement.value.replace(/[^0-9]/g, ''); // Update the inputValue when the input changes
+  });
+  
+  btnSaveSettings.addEventListener('click', async function() {
+      if (inputValue > 10 && inputValue !== "") {
+          try {
+              await settingsDB.write("postDelay", parseInt(inputValue, 10));
+              updatePostDelay(inputValue);
+          } catch (error) {
+              console.error("Error saving post delay to database:", error);
+          }
+      }
+  });
+  
 
 }
 
