@@ -945,34 +945,35 @@ class DatabaseHandler {
     }
   
     async write(key, data) {
-      return new Promise(async (resolve, reject) => {
-        try {
-          if (!this.db) {
-            await this.openDatabase();
+        return new Promise(async (resolve, reject) => {
+          try {
+            if (!this.db) {
+              await this.openDatabase();
+            }
+      
+            const transaction = this.db.transaction([this.storeName], "readwrite");
+            const objectStore = transaction.objectStore(this.storeName);
+      
+            const request = objectStore.put(data, key);
+      
+            request.onsuccess = (event) => {
+              console.log("Write operation successful");
+              resolve();
+            };
+      
+            request.onerror = (event) => {
+              console.error("Error writing to database:", event.target.errorCode);
+              reject("Error writing to database");
+            };
+          } catch (error) {
+            console.error("Error in write:", error);
+            reject(error);
+          } finally {
+            this.closeDatabase();
           }
-  
-          const transaction = this.db.transaction([this.storeName], "readwrite");
-          const objectStore = transaction.objectStore(this.storeName);
-  
-          const request = objectStore.put({ userID: key, ...data });
-  
-          request.onsuccess = (event) => {
-            console.log("Write operation successful");
-            resolve();
-          };
-  
-          request.onerror = (event) => {
-            console.error("Error writing to database:", event.target.errorCode);
-            reject("Error writing to database");
-          };
-        } catch (error) {
-          console.error("Error in write:", error);
-          reject(error);
-        } finally {
-          this.closeDatabase();
-        }
-      });
-    }
+        });
+      }
+      
   
     async executeComplexQuery(queryCallback) {
       return new Promise(async (resolve, reject) => {
