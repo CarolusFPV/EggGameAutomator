@@ -9,7 +9,7 @@
 console.log("Ovi Script Loaded");
 
 //Globar variables
-const version = "1.0.46";
+const version = "1.0.47";
 
 let creditDB;
 let settingsDB;
@@ -147,35 +147,36 @@ class TurnEggsQuickModule extends OviPostModule {
 
     async getSortedUserIDs() {
         try {
-            const objectStore = await creditDB.getObjectStore("yourStoreNameHere"); // Replace "yourStoreNameHere" with your actual store name
-            const getAllKeysRequest = objectStore.getAllKeys();
-    
-            const keys = await new Promise((resolve, reject) => {
-                getAllKeysRequest.onsuccess = (event) => resolve(event.target.result);
-                getAllKeysRequest.onerror = (event) => reject("Error getting keys from store");
+            const userIDs = await creditDB.executeComplexQuery(async (objectStore) => {
+                const getAllKeysRequest = objectStore.getAllKeys();
+                return new Promise((resolve, reject) => {
+                    getAllKeysRequest.onsuccess = (event) => resolve(event.target.result);
+                    getAllKeysRequest.onerror = (event) => reject("Error getting keys from store");
+                });
             });
     
             // Fetch credits for each user in parallel
-            const userIDs = await Promise.all(keys.map(async (userID) => ({
+            const sortedUserIDs = await Promise.all(userIDs.map(async (userID) => ({
                 userID,
                 credits: (await creditDB.read(userID)).credits
             })));
     
             // Sort by credits in descending order
-            userIDs.sort((a, b) => b.credits - a.credits);
+            sortedUserIDs.sort((a, b) => b.credits - a.credits);
     
             // Log user IDs and corresponding credits to the console
-            userIDs.forEach(({ userID, credits }) => {
+            sortedUserIDs.forEach(({ userID, credits }) => {
                 console.log(`UserID: ${userID}, Credits: ${credits}`);
             });
     
             // Return sorted user IDs
-            return userIDs.map(({ userID }) => userID);
+            return sortedUserIDs.map(({ userID }) => userID);
         } catch (error) {
             console.error("Error in getSortedUserIDs:", error);
             return [];
         }
     }
+    
     
 
     async getEggs(userID) {
