@@ -11,7 +11,7 @@
 console.log("Ovi Script Loaded");
 
 //Globar variables
-const version = "1.0.15";
+const version = "1.0.16";
 var creditsEarned = 0;
 var startTime;
 var LastGet = Date.now();
@@ -427,8 +427,10 @@ let postQueueInterval;
 
 //Sends the server requests and handles API limiting
 function startPostQueue() {
+    console.log("Starting post queue, delay: " + postDelay);
     postQueueInterval = setInterval(function () {
         if (PostQueue.length > 0) {
+            console.log("Sending request");
             var request = PostQueue.shift();
             sendPost(request.url, request.body, request.meta)
                 .then(response => handlePostResponse(response, request)); // Pass the request as a parameter
@@ -437,6 +439,7 @@ function startPostQueue() {
 }
 
 function updatePostDelay(newDelay) {
+    console.log("Updateing post delay: " + postDelay + "->" + newDelay);
     postDelay = newDelay;
     clearInterval(postQueueInterval);
     startPostQueue();
@@ -798,7 +801,14 @@ async function writeIndexedDB(dbName, storeName, key, value) {
         // Use an asynchronous function to open a transaction
         let openTransaction = async () => {
           return new Promise((resolve, reject) => {
-            let tx = db.transaction(storeName, "readwrite");
+            let tx;
+            try {
+              tx = db.transaction(storeName, "readwrite");
+            } catch (error) {
+              reject(error);
+              return;
+            }
+  
             tx.oncomplete = () => resolve();
             tx.onerror = () => reject(tx.error);
   
@@ -833,6 +843,7 @@ async function writeIndexedDB(dbName, storeName, key, value) {
       };
     });
   }
+  
   
   
 
