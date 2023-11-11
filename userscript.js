@@ -9,7 +9,7 @@
 console.log("Ovi Script Loaded");
 
 //Globar variables
-const version = "1.0.28";
+const version = "1.0.29";
 
 let creditDB;
 let settingsDB;
@@ -881,29 +881,37 @@ class DatabaseHandler {
     }
   
     openDatabase() {
-      return new Promise((resolve, reject) => {
-        const request = indexedDB.open(this.dbName, 1);
-  
-        request.onerror = (event) => {
-          console.error("Error opening database:", event.target.errorCode);
-          reject("Error opening database");
-        };
-  
-        request.onsuccess = (event) => {
-          this.db = event.target.result;
-          console.log("Database opened successfully");
-          resolve();
-        };
-  
-        request.onupgradeneeded = (event) => {
-          const db = event.target.result;
-          if (!db.objectStoreNames.contains(this.storeName)) {
-            db.createObjectStore(this.storeName, { keyPath: "userID" });
-            console.log("Object store created");
-          }
-        };
-      });
-    }
+        return new Promise((resolve, reject) => {
+          console.log("Attempting to open database:", this.dbName);
+      
+          const request = indexedDB.open(this.dbName, 1);
+      
+          request.onerror = (event) => {
+            console.error("Error opening database:", event.target.errorCode);
+            reject("Error opening database");
+          };
+      
+          request.onsuccess = (event) => {
+            this.db = event.target.result;
+            console.log("Database opened successfully");
+            resolve();
+          };
+      
+          request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains(this.storeName)) {
+              db.createObjectStore(this.storeName, { keyPath: "userID" });
+              console.log("Object store created");
+            }
+          };
+      
+          request.onblocked = (event) => {
+            console.warn("Database access blocked. Please close all tabs with this site and try again.");
+            reject("Database access blocked");
+          };
+        });
+      }
+      
   
     closeDatabase() {
       if (this.db) {
