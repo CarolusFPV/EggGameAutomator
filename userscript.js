@@ -9,7 +9,7 @@
 console.log("Ovi Script Loaded");
 
 //Globar variables
-const version = "1.0.27";
+const version = "1.0.28";
 
 let creditDB;
 let settingsDB;
@@ -885,11 +885,13 @@ class DatabaseHandler {
         const request = indexedDB.open(this.dbName, 1);
   
         request.onerror = (event) => {
+          console.error("Error opening database:", event.target.errorCode);
           reject("Error opening database");
         };
   
         request.onsuccess = (event) => {
           this.db = event.target.result;
+          console.log("Database opened successfully");
           resolve();
         };
   
@@ -897,6 +899,7 @@ class DatabaseHandler {
           const db = event.target.result;
           if (!db.objectStoreNames.contains(this.storeName)) {
             db.createObjectStore(this.storeName, { keyPath: "userID" });
+            console.log("Object store created");
           }
         };
       });
@@ -906,6 +909,7 @@ class DatabaseHandler {
       if (this.db) {
         this.db.close();
         this.db = null;
+        console.log("Database closed");
       }
     }
   
@@ -923,13 +927,16 @@ class DatabaseHandler {
   
           request.onsuccess = (event) => {
             const result = event.target.result;
+            console.log("Read operation successful:", result);
             resolve(result);
           };
   
           request.onerror = (event) => {
+            console.error("Error reading from database:", event.target.errorCode);
             reject("Error reading from database");
           };
         } catch (error) {
+          console.error("Error in read:", error);
           reject(error);
         } finally {
           this.closeDatabase();
@@ -950,13 +957,16 @@ class DatabaseHandler {
           const request = objectStore.put({ userID: key, ...data });
   
           request.onsuccess = (event) => {
+            console.log("Write operation successful");
             resolve();
           };
   
           request.onerror = (event) => {
+            console.error("Error writing to database:", event.target.errorCode);
             reject("Error writing to database");
           };
         } catch (error) {
+          console.error("Error in write:", error);
           reject(error);
         } finally {
           this.closeDatabase();
@@ -976,13 +986,16 @@ class DatabaseHandler {
   
           await queryCallback(objectStore, resolve, reject);
         } catch (error) {
+          console.error("Error in executeComplexQuery:", error);
           reject(error);
         } finally {
           this.closeDatabase();
         }
       });
     }
-  }
+}
+
+
   
   async function addToUserCredits(userID, credits) {
   
