@@ -9,7 +9,7 @@
 console.log("Ovi Script Loaded");
 
 //Globar variables
-const version = "1.0.31";
+const version = "1.0.32";
 
 let creditDB;
 let settingsDB;
@@ -139,19 +139,17 @@ class TurnEggsQuickModule extends OviPostModule {
         });
     }
 
-    async getSortedUserIDs(dbName, storeName) {
-        const creditDB = new DatabaseHandler(dbName, storeName);
-      
+    async getSortedUserIDs() {
         return new Promise(async (resolve, reject) => {
           try {
             // Open the IndexedDB database
             await creditDB.openDatabase();
       
             // Execute the complex query using the DatabaseHandler
-            await creditDB.executeComplexQuery(async (objectStore, resolve, reject) => {
+            await creditDB.executeComplexQuery(async (resolve) => {
               // Get all keys (userIDs) from the store
               const userIDs = await new Promise((resolve, reject) => {
-                const getAllKeysRequest = objectStore.getAllKeys();
+                const getAllKeysRequest = creditDB.objectStore.getAllKeys();
                 getAllKeysRequest.onsuccess = (event) => resolve(event.target.result);
                 getAllKeysRequest.onerror = (event) => reject("Error getting keys from store");
               });
