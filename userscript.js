@@ -1080,20 +1080,31 @@ if (!document.getElementById("scriptMenu")) {
           <li><a id="statusText">Status: idle</a></li>
           <li><a id="creditsGainedCounter">Credits Gained: 0</a></li>
           <li><a id="postQueue">Post Queue: 0</a></li>
-          <li><a>Post Delay:  </a><input type="text" id="inpPostDelay" style="width: 40px;"><a>ms</a></li>
+          <li><a>Post Delay:  </a><input type="text" id="inpPostDelay" style="width: 40px;">
+          <input type="button" value="Save" id="btnSaveSettings" style="
+            width: 50px;
+            margin-left: 10px;
+      "></li>
         </ul>
     </div>
   `);
+  
   const inputElement = document.getElementById('inpPostDelay');
-    inputElement.addEventListener('input', function() {
-        const inputValue = inputElement.value;
-        const numericValue = inputValue.replace(/[^0-9]/g, '');
-        inputElement.value = numericValue;
-        if(numericValue > 10 && numericValue){
-            writeIndexedDB("oviscript","settings","postDelay",numericValue);
-            updatePostDelay(numericValue);
-        }
-    });
+const btnSaveSettings = document.getElementById('btnSaveSettings');
+
+let inputValue = ""; // Initialize the variable to store the input value
+
+inputElement.addEventListener('input', function() {
+    inputValue = inputElement.value.replace(/[^0-9]/g, ''); // Update the inputValue when the input changes
+});
+
+btnSaveSettings.addEventListener('click', function() {
+    if (inputValue > 10 && inputValue !== "") {
+        writeIndexedDB("oviscript", "settings", "postDelay", inputValue);
+        updatePostDelay(inputValue);
+    }
+});
+
 }
 
 function addCustomSelectionOptions() {
@@ -1156,10 +1167,33 @@ async function startMacro() {
     addCustomSelectionOptions();
 }
 
-async function loadSettings(){
-    await readIndexedDB("oviscript","settings","postDelay").then(function (value) {
-        postDelay = value;
+async function loadSettings() {
+    return new Promise(async (resolve, reject) => {
+      try {
+        // Read the value from the database
+        let value = await readIndexedDB("oviscript", "settings", "postDelay");
+  
+        // If the value exists, set the global variable and resolve the promise
+        if (value !== undefined && value !== null) {
+          postDelay = value;
+          resolve();
+        } else {
+          // If the value doesn't exist, write the default value
+          await writeIndexedDB("oviscript", "settings", "postDelay", defaultPostDelay);
+  
+          // Set the global variable to the default value
+          postDelay = defaultPostDelay;
+  
+          // Resolve the promise
+          resolve();
+        }
+      } catch (error) {
+        // Handle errors, you might want to log or reject the promise
+        console.error("Error loading settings:", error);
+        reject(error);
+      }
     });
-}
+  }
+  
 
 startMacro();
