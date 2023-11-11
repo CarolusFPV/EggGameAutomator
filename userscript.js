@@ -6,8 +6,6 @@
 // 5] Update credits live
 //Instead of showing status also turn background-color of the buttons to lime
 
-
-
 console.log("Ovi Script Loaded");
 
 //Globar variables
