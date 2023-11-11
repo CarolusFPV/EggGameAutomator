@@ -11,7 +11,7 @@
 console.log("Ovi Script Loaded");
 
 //Globar variables
-const version = "1.0.17";
+const version = "1.0.18";
 var creditsEarned = 0;
 var startTime;
 var LastGet = Date.now();
@@ -28,12 +28,13 @@ class OviPostModule {
         const buttonId = `btn${this.name}`;
         $("#scriptMenu").append(`<li><input type="button" value="${this.buttonText}" id="${buttonId}"/></li>`);
         const button = $(`#${buttonId}`);
-        button.on('click', function() {
-          button.css('background-color', 'lime');
-          button.click(this.clickHandler);
-          button.css('background-color', '');
+        
+        button.on('click', () => {
+            button.css('background-color', 'lime');
+            this.clickHandler();
+            button.css('background-color', '');
         });
-      }
+    }
 }
 
 
