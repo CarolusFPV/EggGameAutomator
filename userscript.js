@@ -9,7 +9,7 @@
 console.log("Ovi Script Loaded");
 
 //Globar variables
-const version = "1.0.38";
+const version = "1.0.39";
 
 let creditDB;
 let settingsDB;
@@ -157,7 +157,7 @@ class TurnEggsQuickModule extends OviPostModule {
                   console.log(`UserID: ${userID}, Credits: ${credits}`);
                 });
       
-                // Resolve with only user IDs
+                // Resolve with sorted user IDs
                 resolve(sortedUserIDs.map(({ userID }) => userID));
               };
               getAllKeysRequest.onerror = (event) => reject("Error getting keys from store");
@@ -167,6 +167,7 @@ class TurnEggsQuickModule extends OviPostModule {
           }
         });
       }
+      
       
       
       
