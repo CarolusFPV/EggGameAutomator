@@ -9,7 +9,7 @@
 console.log("Ovi Script Loaded");
 
 //Globar variables
-const version = "1.0.30";
+const version = "1.0.31";
 
 let creditDB;
 let settingsDB;
@@ -884,7 +884,7 @@ class DatabaseHandler {
         return new Promise((resolve, reject) => {
           console.log("Attempting to open database:", this.dbName);
       
-          const request = indexedDB.open(this.dbName, 1);
+          const request = indexedDB.open(this.dbName);
       
           request.onerror = (event) => {
             console.error("Error opening database:", event.target.errorCode);
