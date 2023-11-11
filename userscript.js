@@ -9,7 +9,7 @@
 console.log("Ovi Script Loaded");
 
 //Globar variables
-const version = "1.0.26";
+const version = "1.0.27";
 
 let creditDB;
 let settingsDB;
@@ -1178,20 +1178,29 @@ function addCustomSelectionButtons() {
 // Initiator
 // ======================================================================
 
-async function startMacro() {
-    creditDB = new DatabaseHandler("oviscript_creditDB", "CreditsFromEggs");
-    settingsDB = new DatabaseHandler("oviscript","settings");
-
-    await loadSettings();
-
-    startPostQueue();
-
-    startPostQueueCounter();
-
-    addCustomSelectionOptions();
+async function initialize(){
+    await startMacro();
 }
 
-async function loadSettings() {
+async function startMacro() {
+    
+    try {
+        creditDB = new DatabaseHandler("oviscript_creditDB", "CreditsFromEggs");
+        settingsDB = new DatabaseHandler("oviscript","settings");
+
+        await loadSettings(settingsDB);
+    
+        startPostQueue();
+    
+        startPostQueueCounter();
+    
+        addCustomSelectionOptions();
+      } catch (error) {
+        console.error("Error in startMacro:", error);
+      }
+}
+
+async function loadSettings(settingsDB) {
     return new Promise(async (resolve, reject) => {
       try {
         // Read the value from the database using the DatabaseHandler
@@ -1229,4 +1238,4 @@ async function loadSettings() {
     });
   }
   
-startMacro();
+initialize();
