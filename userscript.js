@@ -1290,6 +1290,10 @@ async function loadSettings() {
         // If the value exists, set the global variable and resolve the promise
         if (value !== undefined && value !== null) {
           postDelay = value;
+  
+          // Set the value of the input box with ID 'inpPostDelay'
+          document.getElementById('inpPostDelay').value = postDelay;
+  
           resolve();
         } else {
           // If the value doesn't exist, write the default value
@@ -1297,6 +1301,9 @@ async function loadSettings() {
   
           // Set the global variable to the default value
           postDelay = defaultPostDelay;
+  
+          // Set the value of the input box with ID 'inpPostDelay'
+          document.getElementById('inpPostDelay').value = postDelay;
   
           // Resolve the promise
           resolve();
@@ -1308,6 +1315,7 @@ async function loadSettings() {
       }
     });
   }
+  
   
 
 startMacro();
