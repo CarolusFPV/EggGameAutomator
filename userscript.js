@@ -9,7 +9,7 @@
 console.log("Ovi Script Loaded");
 
 //Globar variables
-const version = "1.0.42";
+const version = "1.0.43";
 
 let creditDB;
 let settingsDB;
@@ -119,7 +119,9 @@ class TurnEggsQuickModule extends OviPostModule {
         super('TurnEggsQuick', 'Turn Eggs (Quick)', async () => {
             creditsEarned = 0;
             startTime = Date.now()
+            console.log("finding friends..");
             const friends = await this.getSortedUserIDs();
+            console.log(friends);
             var eggCounter = 0;
             var friendCounter = 0;
             console.log("Before while loop");
