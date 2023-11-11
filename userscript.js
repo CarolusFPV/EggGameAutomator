@@ -9,7 +9,7 @@
 console.log("Ovi Script Loaded");
 
 //Globar variables
-const version = "1.0.43";
+const version = "1.0.44";
 
 let creditDB;
 let settingsDB;
@@ -145,6 +145,46 @@ class TurnEggsQuickModule extends OviPostModule {
     }
     
 
+    async getSortedUserIDs() {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const userIDs = await creditDB.executeComplexQuery(async (objectStore, resolve, reject) => {
+                    const getAllKeysRequest = objectStore.getAllKeys();
+                    getAllKeysRequest.onsuccess = async (event) => {
+                        const sortedUserIDs = event.target.result;
+    
+                        // Fetch credits for each user in parallel
+                        const fetchCreditsPromises = sortedUserIDs.map(async (userID) => ({
+                            userID,
+                            credits: (await creditDB.read(userID)).credits
+                        }));
+    
+                        try {
+                            // Wait for all promises to complete
+                            const sortedUserIDs = await Promise.all(fetchCreditsPromises);
+    
+                            // Sort by credits in descending order
+                            sortedUserIDs.sort((a, b) => b.credits - a.credits);
+    
+                            // Log user IDs and corresponding credits to the console
+                            sortedUserIDs.forEach(({ userID, credits }) => {
+                                console.log(`UserID: ${userID}, Credits: ${credits}`);
+                            });
+    
+                            // Resolve with sorted user IDs
+                            resolve(sortedUserIDs.map(({ userID }) => userID));
+                        } catch (error) {
+                            // Reject if any of the promises fail
+                            reject(error);
+                        }
+                    };
+                    getAllKeysRequest.onerror = (event) => reject("Error getting keys from store");
+                });
+            } catch (error) {
+                reject(error);
+            }
+        });
+    }
     async getSortedUserIDs() {
         return new Promise(async (resolve, reject) => {
           try {
