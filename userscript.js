@@ -9,7 +9,7 @@
 console.log("Ovi Script Loaded");
 
 //Globar variables
-const version = "1.0.32";
+const version = "1.0.33";
 
 let creditDB;
 let settingsDB;
@@ -139,38 +139,30 @@ class TurnEggsQuickModule extends OviPostModule {
         });
     }
 
-    async getSortedUserIDs() {
+    async getSortedUserIDs(dbName, storeName) {
         return new Promise(async (resolve, reject) => {
           try {
-            // Open the IndexedDB database
-            await creditDB.openDatabase();
-      
-            // Execute the complex query using the DatabaseHandler
-            await creditDB.executeComplexQuery(async (resolve) => {
-              // Get all keys (userIDs) from the store
-              const userIDs = await new Promise((resolve, reject) => {
-                const getAllKeysRequest = creditDB.objectStore.getAllKeys();
-                getAllKeysRequest.onsuccess = (event) => resolve(event.target.result);
-                getAllKeysRequest.onerror = (event) => reject("Error getting keys from store");
-              });
-      
-              // Sort the userIDs based on credits in descending order
-              userIDs.sort(async (a, b) => {
-                const creditsA = (await creditDB.read(a)).credits;
-                const creditsB = (await creditDB.read(b)).credits;
-                return creditsB - creditsA;
-              });
-      
-              resolve(userIDs);
+            const db = new DatabaseHandler(dbName, storeName);
+            const userIDs = await db.executeComplexQuery((objectStore, resolve, reject) => {
+              const getAllKeysRequest = objectStore.getAllKeys();
+              getAllKeysRequest.onsuccess = (event) => resolve(event.target.result);
+              getAllKeysRequest.onerror = (event) => reject("Error getting keys from store");
             });
+      
+            // Sort the userIDs based on credits in descending order
+            userIDs.sort(async (a, b) => {
+              const creditsA = (await db.read(a)).credits;
+              const creditsB = (await db.read(b)).credits;
+              return creditsB - creditsA;
+            });
+      
+            resolve(userIDs);
           } catch (error) {
             reject(error);
-          } finally {
-            // Close the database after the operation is completed
-            creditDB.closeDatabase();
           }
         });
       }
+      
       
       
 
