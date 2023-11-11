@@ -11,8 +11,8 @@ console.log("Ovi Script Loaded");
 //Globar variables
 const version = "1.0.25";
 
-const creditDB = new DatabaseHandler("oviscript_creditDB", "CreditsFromEggs");
-const settingsDB = new DatabaseHandler("oviscript","settings");
+let creditDB;
+let settingsDB;
   
 var creditsEarned = 0;
 var startTime;
@@ -1179,6 +1179,9 @@ function addCustomSelectionButtons() {
 // ======================================================================
 
 async function startMacro() {
+    creditDB = new DatabaseHandler("oviscript_creditDB", "CreditsFromEggs");
+    settingsDB = new DatabaseHandler("oviscript","settings");
+
     await loadSettings();
 
     startPostQueue();
@@ -1189,12 +1192,10 @@ async function startMacro() {
 }
 
 async function loadSettings() {
-    const key = "postDelay";
-  
     return new Promise(async (resolve, reject) => {
       try {
         // Read the value from the database using the DatabaseHandler
-        let value = await settingsDB.read(key);
+        let value = await settingsDB.read("postDelay");
   
         // If the value exists, set the global variable and resolve the promise
         if (value !== undefined && value !== null) {
@@ -1206,7 +1207,7 @@ async function loadSettings() {
           resolve();
         } else {
           // If the value doesn't exist, write the default value
-          await settingsDB.write(key, 350);
+          await settingsDB.write("postDelay", 350);
   
           // Set the global variable to the default value
           postDelay = defaultPostDelay;
