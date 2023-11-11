@@ -9,7 +9,7 @@
 console.log("Ovi Script Loaded");
 
 //Globar variables
-const version = "1.0.22";
+const version = "1.0.23";
 var creditsEarned = 0;
 var startTime;
 var LastGet = Date.now();
