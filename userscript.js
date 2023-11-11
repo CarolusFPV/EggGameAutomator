@@ -783,51 +783,57 @@ async function sendGet(params) {
 // This function takes a database name, an object store name, a key, and a value as parameters
 // It opens the database and creates the object store if it doesn't exist
 // It then writes the key-value pair to the object store
-function writeIndexedDB(dbName, storeName, key, value) {
-    // Open the database
-    let request = indexedDB.open(dbName);
+async function writeIndexedDB(dbName, storeName, key, value) {
+    return new Promise((resolve, reject) => {
+      let request = indexedDB.open(dbName);
   
-    // Handle errors
-    request.onerror = function(event) {
-      console.error("Error opening database:", event.target.errorCode);
-    };
-  
-    // Handle success
-    request.onsuccess = function(event) {
-      // Get the database object
-      let db = event.target.result;
-  
-      // Start a transaction
-      let tx = db.transaction(storeName, "readwrite");
-  
-      // Get the object store
-      let store = tx.objectStore(storeName);
-  
-      // Write the value to the object store
-      store.put(value, key);
-  
-      // Close the transaction
-      tx.oncomplete = function() {
-        db.close();
+      request.onerror = function (event) {
+        console.error("Error opening database:", event.target.errorCode);
+        reject(event.target.errorCode);
       };
-    };
   
-    // Handle database upgrade
-    request.onupgradeneeded = function(event) {
-      // Get the database object
-      let db = event.target.result;
+      request.onsuccess = function (event) {
+        let db = event.target.result;
   
-      // Create the object store if it doesn't exist
-      if (!db.objectStoreNames.contains(storeName)) {
-        db.createObjectStore(storeName);
-      }
+        // Use an asynchronous function to open a transaction
+        let openTransaction = async () => {
+          return new Promise((resolve, reject) => {
+            let tx = db.transaction(storeName, "readwrite");
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
   
-      // Continue with the transaction
-      let tx = event.target.transaction;
-      let store = tx.objectStore(storeName);
-      store.put(value, key);
-    };
+            let store = tx.objectStore(storeName);
+            store.put(value, key);
+          });
+        };
+  
+        // Execute the transaction
+        openTransaction()
+          .then(() => {
+            // Close the database
+            db.close();
+            resolve();
+          })
+          .catch((error) => {
+            console.error("Error writing to object store:", error);
+            reject(error);
+          });
+      };
+  
+      request.onupgradeneeded = function (event) {
+        let db = event.target.result;
+  
+        if (!db.objectStoreNames.contains(storeName)) {
+          db.createObjectStore(storeName);
+        }
+  
+        let tx = event.target.transaction;
+        let store = tx.objectStore(storeName);
+        store.put(value, key);
+      };
+    });
   }
+  
   
 
 // This function takes a database name, an object store name, and a key as parameters
