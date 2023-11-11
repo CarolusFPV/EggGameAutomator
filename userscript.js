@@ -11,7 +11,7 @@
 console.log("Ovi Script Loaded");
 
 //Globar variables
-const version = "1.0.16";
+const version = "1.0.17";
 var creditsEarned = 0;
 var startTime;
 var LastGet = Date.now();
@@ -439,7 +439,7 @@ function startPostQueue() {
 }
 
 function updatePostDelay(newDelay) {
-    console.log("Updateing post delay: " + postDelay + "->" + newDelay);
+    console.log("Updating post delay: " + postDelay + "->" + newDelay);
     postDelay = newDelay;
     clearInterval(postQueueInterval);
     startPostQueue();
@@ -795,8 +795,29 @@ async function writeIndexedDB(dbName, storeName, key, value) {
         reject(event.target.errorCode);
       };
   
-      request.onsuccess = function (event) {
+      request.onsuccess = async function (event) {
         let db = event.target.result;
+  
+        // Check if the object store exists, create it if needed
+        if (!db.objectStoreNames.contains(storeName)) {
+          try {
+            let version = db.version + 1;
+            db.close();
+            let upgradeRequest = indexedDB.open(dbName, version);
+            upgradeRequest.onupgradeneeded = function (event) {
+              let upgradedDB = event.target.result;
+              upgradedDB.createObjectStore(storeName);
+            };
+            await new Promise((resolve, reject) => {
+              upgradeRequest.onsuccess = resolve;
+              upgradeRequest.onerror = reject;
+            });
+          } catch (error) {
+            console.error("Error creating object store:", error);
+            reject(error);
+            return;
+          }
+        }
   
         // Use an asynchronous function to open a transaction
         let openTransaction = async () => {
@@ -829,20 +850,9 @@ async function writeIndexedDB(dbName, storeName, key, value) {
             reject(error);
           });
       };
-  
-      request.onupgradeneeded = function (event) {
-        let db = event.target.result;
-  
-        if (!db.objectStoreNames.contains(storeName)) {
-          db.createObjectStore(storeName);
-        }
-  
-        let tx = event.target.transaction;
-        let store = tx.objectStore(storeName);
-        store.put(value, key);
-      };
     });
   }
+  
   
   
   
