@@ -11,7 +11,7 @@
 console.log("Ovi Script Loaded");
 
 //Globar variables
-const version = "1.0.18";
+const version = "1.0.19";
 var creditsEarned = 0;
 var startTime;
 var LastGet = Date.now();
@@ -51,7 +51,6 @@ class TurnEggsModule extends OviPostModule {
             const friends = await this.getFriendList();
             var eggCounter = 0;
             var friendCounter = 0;
-            var totalFriends = friends.length;
             while (friends.length > 0) {
                 while (PostQueue.length > 0) {
                     await new Promise(r => setTimeout(r, 50));
@@ -105,6 +104,85 @@ class TurnEggsModule extends OviPostModule {
     }
 }
 const turnEggsModule = new TurnEggsModule();
+
+//This module is used to automatically mass turn eggs for all your friends.
+class TurnEggsQuickModule extends OviPostModule {
+    constructor() {
+        super('TurnEggsQuick', 'Turn Eggs (Quick)', async () => {
+            creditsEarned = 0;
+            startTime = Date.now()
+            const friends = await this.getSortedUserIDs();
+            var eggCounter = 0;
+            var friendCounter = 0;
+            while (friends.length > 0) {
+                while (PostQueue.length > 0) {
+                    await new Promise(r => setTimeout(r, 50));
+                }
+                var friend = friends.pop();
+                friendCounter++;
+                var eggs = await this.getEggs(friend);
+                eggCounter += eggs.length;
+                setStatus("Turning (Q) Eggs (" + friend + ")");
+                eggs.forEach(function (egg) {
+                    turnEgg(egg, friend);
+                });
+            }
+            setStatus("idle");
+            printAllData("oviscript_creditDB", "CreditsFromEggs");
+        });
+    }
+
+    async getSortedUserIDs(dbName, storeName) {
+        return new Promise(async (resolve, reject) => {
+          try {
+            // Open the IndexedDB database
+            const db = await new Promise((resolve, reject) => {
+              const request = indexedDB.open(dbName);
+              request.onerror = (event) => reject("Error opening database");
+              request.onsuccess = (event) => resolve(event.target.result);
+            });
+      
+            // Open a transaction to the store
+            const transaction = db.transaction([storeName], "readonly");
+            const store = transaction.objectStore(storeName);
+      
+            // Get all records from the store
+            const sortedUserIDs = await new Promise((resolve, reject) => {
+              const getAllRequest = store.getAll();
+              getAllRequest.onsuccess = (event) => resolve(event.target.result);
+              getAllRequest.onerror = (event) => reject("Error getting records from store");
+            });
+      
+            // Sort the records based on credits in descending order
+            sortedUserIDs.sort((a, b) => b.credits - a.credits);
+      
+            // Extract and return only the userIDs
+            const userIDs = sortedUserIDs.map((record) => record.userID);
+      
+            resolve(userIDs);
+          } catch (error) {
+            reject(error);
+          }
+        });
+      }
+
+    async getEggs(userID) {
+        console.log("Get Eggs: " + userID);
+        const response = await sendGet("src=pets&sub=hatchery&usr=" + userID);
+        var eggs = [];
+        response.split('Turn Egg').forEach(function (egg) {
+            if (!(egg.includes('to avoid') || egg.includes('exectime'))) {
+                egg = egg.split('pet=').pop().split('&').shift();
+                if (egg.length <= 10) {
+                    eggs.push(egg);
+                }
+            }
+        });
+        return eggs;
+    }
+}
+const turnEggsQuickModule = new TurnEggsQuickModule();
+
 
 class HatchEggsModule extends OviPostModule {
     constructor() {
@@ -799,60 +877,67 @@ async function writeIndexedDB(dbName, storeName, key, value) {
       request.onsuccess = async function (event) {
         let db = event.target.result;
   
-        // Check if the object store exists, create it if needed
-        if (!db.objectStoreNames.contains(storeName)) {
-          try {
-            let version = db.version + 1;
-            db.close();
-            let upgradeRequest = indexedDB.open(dbName, version);
-            upgradeRequest.onupgradeneeded = function (event) {
-              let upgradedDB = event.target.result;
-              upgradedDB.createObjectStore(storeName);
-            };
-            await new Promise((resolve, reject) => {
-              upgradeRequest.onsuccess = resolve;
-              upgradeRequest.onerror = reject;
-            });
-          } catch (error) {
-            console.error("Error creating object store:", error);
-            reject(error);
-            return;
-          }
-        }
-  
-        // Use an asynchronous function to open a transaction
-        let openTransaction = async () => {
-          return new Promise((resolve, reject) => {
-            let tx;
+        // Check if the database connection is still open
+        if (db && db.readyState === "done") {
+          // Check if the object store exists, create it if needed
+          if (!db.objectStoreNames.contains(storeName)) {
             try {
-              tx = db.transaction(storeName, "readwrite");
+              let version = db.version + 1;
+              db.close();
+              let upgradeRequest = indexedDB.open(dbName, version);
+              upgradeRequest.onupgradeneeded = function (event) {
+                let upgradedDB = event.target.result;
+                upgradedDB.createObjectStore(storeName);
+              };
+              await new Promise((resolve, reject) => {
+                upgradeRequest.onsuccess = resolve;
+                upgradeRequest.onerror = reject;
+              });
             } catch (error) {
+              console.error("Error creating object store:", error);
               reject(error);
               return;
             }
+          }
   
-            tx.oncomplete = () => resolve();
-            tx.onerror = () => reject(tx.error);
+          // Use an asynchronous function to open a transaction
+          let openTransaction = async () => {
+            return new Promise((resolve, reject) => {
+              let tx;
+              try {
+                tx = db.transaction(storeName, "readwrite");
+              } catch (error) {
+                reject(error);
+                return;
+              }
   
-            let store = tx.objectStore(storeName);
-            store.put(value, key);
-          });
-        };
+              tx.oncomplete = () => resolve();
+              tx.onerror = () => reject(tx.error);
   
-        // Execute the transaction
-        openTransaction()
-          .then(() => {
-            // Close the database
-            db.close();
-            resolve();
-          })
-          .catch((error) => {
-            console.error("Error writing to object store:", error);
-            reject(error);
-          });
+              let store = tx.objectStore(storeName);
+              store.put(value, key);
+            });
+          };
+  
+          // Execute the transaction
+          openTransaction()
+            .then(() => {
+              // Close the database
+              db.close();
+              resolve();
+            })
+            .catch((error) => {
+              console.error("Error writing to object store:", error);
+              reject(error);
+            });
+        } else {
+          console.error("Database connection is closed.");
+          reject(new Error("Database connection is closed."));
+        }
       };
     });
   }
+  
   
   
   
