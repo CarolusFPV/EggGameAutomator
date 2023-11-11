@@ -9,7 +9,7 @@
 console.log("Ovi Script Loaded");
 
 //Globar variables
-const version = "1.0.24";
+const version = "1.0.25";
 
 const creditDB = new DatabaseHandler("oviscript_creditDB", "CreditsFromEggs");
 const settingsDB = new DatabaseHandler("oviscript","settings");
