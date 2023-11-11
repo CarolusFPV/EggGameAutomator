@@ -9,7 +9,7 @@
 console.log("Ovi Script Loaded");
 
 //Globar variables
-const version = "1.0.37";
+const version = "1.0.38";
 
 let creditDB;
 let settingsDB;
@@ -145,19 +145,20 @@ class TurnEggsQuickModule extends OviPostModule {
             const userIDs = await creditDB.executeComplexQuery(async (objectStore, resolve, reject) => {
               const getAllKeysRequest = objectStore.getAllKeys();
               getAllKeysRequest.onsuccess = async (event) => {
-                const sortedUserIDs = event.target.result.sort(async (a, b) => {
-                  const creditsA = (await creditDB.read(a)).credits;
-                  const creditsB = (await creditDB.read(b)).credits;
-                  return creditsB - creditsA;
-                });
+                const sortedUserIDs = await Promise.all(event.target.result.map(async (userID) => ({
+                  userID,
+                  credits: (await creditDB.read(userID)).credits
+                })));
+      
+                sortedUserIDs.sort((a, b) => b.credits - a.credits);
       
                 // Log user IDs and corresponding credits to the console
-                sortedUserIDs.forEach(async (userID) => {
-                  const credits = (await creditDB.read(userID)).credits;
+                sortedUserIDs.forEach(({ userID, credits }) => {
                   console.log(`UserID: ${userID}, Credits: ${credits}`);
                 });
       
-                resolve(sortedUserIDs);
+                // Resolve with only user IDs
+                resolve(sortedUserIDs.map(({ userID }) => userID));
               };
               getAllKeysRequest.onerror = (event) => reject("Error getting keys from store");
             });
@@ -166,6 +167,7 @@ class TurnEggsQuickModule extends OviPostModule {
           }
         });
       }
+      
       
       
       
