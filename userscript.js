@@ -997,11 +997,9 @@ class DatabaseHandler {
 
 
   
-  async function addToUserCredits(userID, credits) {
-  
+async function addToUserCredits(userID, credits) {
     try {
-      await creditDB.performDatabaseOperation(async (db) => {
-
+      await creditDB.executeComplexQuery(async (objectStore) => {
         // Check if the user already exists in the object store
         const existingRecord = await creditDB.read(userID);
   
@@ -1030,11 +1028,9 @@ class DatabaseHandler {
       });
     } catch (error) {
       console.error("Error adding credits:", error);
-    } finally {
-      // Close the database after the operation is completed
-      creditDB.closeDatabase();
     }
   }
+  
   
 // ======================================================================
 // JQuery and Regex (stuff that might change over time..)
