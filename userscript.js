@@ -9,7 +9,7 @@
 console.log("Ovi Script Loaded");
 
 //Globar variables
-const version = "1.0.47";
+const version = "1.0.50";
 
 let creditDB;
 let settingsDB;
@@ -146,38 +146,60 @@ class TurnEggsQuickModule extends OviPostModule {
     
 
     async getSortedUserIDs() {
-        try {
-            const userIDs = await creditDB.executeComplexQuery(async (objectStore) => {
-                const getAllKeysRequest = objectStore.getAllKeys();
-                return new Promise((resolve, reject) => {
-                    getAllKeysRequest.onsuccess = (event) => resolve(event.target.result);
-                    getAllKeysRequest.onerror = (event) => reject("Error getting keys from store");
+        return new Promise(async (resolve, reject) => {
+            try {
+                const userIDs = await creditDB.executeComplexQuery(async (objectStore, resolve, reject) => {
+                    try {
+                        const getAllKeysRequest = objectStore.getAllKeys();
+    
+                        getAllKeysRequest.onsuccess = async (event) => {
+                            const sortedUserIDs = event.target.result;
+    
+                            // Fetch credits for each user in parallel
+                            const fetchCreditsPromises = sortedUserIDs.map(async (userID) => ({
+                                userID,
+                                credits: (await creditDB.read(userID)).credits
+                            }));
+    
+                            try {
+                                // Wait for all promises to complete
+                                const sortedUserIDs = await Promise.all(fetchCreditsPromises);
+    
+                                // Sort by credits in descending order
+                                sortedUserIDs.sort((a, b) => b.credits - a.credits);
+    
+                                // Log user IDs and corresponding credits to the console
+                                sortedUserIDs.forEach(({ userID, credits }) => {
+                                    console.log(`UserID: ${userID}, Credits: ${credits}`);
+                                });
+    
+                                // Resolve with sorted user IDs
+                                resolve(sortedUserIDs.map(({ userID }) => userID));
+                            } catch (error) {
+                                // Reject if any of the promises fail
+                                reject(error);
+                            }
+                        };
+    
+                        getAllKeysRequest.onerror = (event) => reject("Error getting keys from store");
+                    } catch (error) {
+                        reject(error);
+                    }
                 });
-            });
-    
-            // Fetch credits for each user in parallel
-            const sortedUserIDs = await Promise.all(userIDs.map(async (userID) => ({
-                userID,
-                credits: (await creditDB.read(userID)).credits
-            })));
-    
-            // Sort by credits in descending order
-            sortedUserIDs.sort((a, b) => b.credits - a.credits);
-    
-            // Log user IDs and corresponding credits to the console
-            sortedUserIDs.forEach(({ userID, credits }) => {
-                console.log(`UserID: ${userID}, Credits: ${credits}`);
-            });
-    
-            // Return sorted user IDs
-            return sortedUserIDs.map(({ userID }) => userID);
-        } catch (error) {
-            console.error("Error in getSortedUserIDs:", error);
-            return [];
-        }
+            } catch (error) {
+                reject(error);
+            }
+        });
     }
     
-    
+      
+      
+      
+      
+      
+      
+      
+      
 
     async getEggs(userID) {
         console.log("Get Eggs: " + userID);
