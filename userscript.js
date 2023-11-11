@@ -9,7 +9,7 @@
 console.log("Ovi Script Loaded");
 
 //Globar variables
-const version = "1.0.35";
+const version = "1.0.36";
 
 let creditDB;
 let settingsDB;
@@ -999,37 +999,58 @@ class DatabaseHandler {
   
 async function addToUserCredits(userID, credits) {
     try {
-      await creditDB.executeComplexQuery(async (objectStore) => {
-        // Check if the user already exists in the object store
-        const existingRecord = await creditDB.read(userID);
+      await creditDB.executeComplexQuery(async (objectStore, resolve, reject) => {
+        try {
+          // Check if the user already exists in the object store
+          const existingRecord = await creditDB.read(userID);
   
-        // If the user exists, update the credits
-        if (existingRecord) {
-          // Get the current amount of credits
-          let currentCredits = existingRecord.credits;
+          // If the user exists, update the credits
+          if (existingRecord) {
+            // Get the current amount of credits
+            let currentCredits = existingRecord.credits;
   
-          // Add the new amount of credits
-          let newCredits = currentCredits + credits;
+            // Add the new amount of credits
+            let newCredits = currentCredits + credits;
   
-          // Update the record with the new amount of credits
-          existingRecord.credits = newCredits;
+            // Update the record with the new amount of credits
+            existingRecord.credits = newCredits;
   
-          // Write the updated record to the object store
-          await creditDB.write(userID, existingRecord);
-        }
-        // If the user does not exist, create a new record
-        else {
-          // Create a new record with the given amount of credits
-          let record = { username: userID, credits: credits };
+            // Use the put operation to update the record
+            const updateRequest = objectStore.put(existingRecord);
   
-          // Write the new record to the object store
-          await creditDB.write(userID, record);
+            updateRequest.onsuccess = (event) => {
+              resolve();
+            };
+  
+            updateRequest.onerror = (event) => {
+              reject("Error updating record in the object store");
+            };
+          }
+          // If the user does not exist, create a new record
+          else {
+            // Create a new record with the given amount of credits
+            let record = { userID: userID, credits: credits };
+  
+            // Use the add operation to insert the new record
+            const addRequest = objectStore.add(record);
+  
+            addRequest.onsuccess = (event) => {
+              resolve();
+            };
+  
+            addRequest.onerror = (event) => {
+              reject("Error adding new record to the object store");
+            };
+          }
+        } catch (error) {
+          reject(error);
         }
       });
     } catch (error) {
       console.error("Error adding credits:", error);
     }
   }
+  
   
   
 // ======================================================================
