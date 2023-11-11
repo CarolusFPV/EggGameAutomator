@@ -11,7 +11,7 @@
 console.log("Ovi Script Loaded");
 
 //Globar variables
-const version = "1.0.13";
+const version = "1.0.14";
 var creditsEarned = 0;
 var startTime;
 var LastGet = Date.now();
@@ -1088,7 +1088,7 @@ if (!document.getElementById("scriptMenu")) {
         </ul>
     </div>
   `);
-  
+
   const inputElement = document.getElementById('inpPostDelay');
 const btnSaveSettings = document.getElementById('btnSaveSettings');
 
