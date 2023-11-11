@@ -11,7 +11,7 @@
 console.log("Ovi Script Loaded");
 
 //Globar variables
-const version = "1.0.19";
+const version = "1.0.20";
 var creditsEarned = 0;
 var startTime;
 var LastGet = Date.now();
@@ -486,6 +486,7 @@ const testModule = new TestModule();
 
 $(document).ready(function () {
     turnEggsModule.render();
+    turnEggsQuickModule.render();
     hatchEggsModule.render();
     massNameModule.render();
     massDescModule.render();
