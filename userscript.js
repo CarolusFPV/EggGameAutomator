@@ -1,27 +1,14 @@
 console.log("Ovi Script Loaded");
 
-//Settings
-const postDelay = 500;
+const version = "1.0.53";
 
-//Globar variables
+let creditDB;
+let settingsDB;
+
 var creditsEarned = 0;
 var startTime;
 var LastGet = Date.now();
-
-class OviPostModule {
-    constructor(name, buttonText, clickHandler) {
-        this.name = name;
-        this.buttonText = buttonText;
-        this.clickHandler = clickHandler;
-    }
-
-    render() {
-        const buttonId = `btn${this.name}`;
-        $("#scriptMenu").append(`<li><input type="button" value="${this.buttonText}" id="${buttonId}"/></li>`);
-        $(`#${buttonId}`).click(this.clickHandler);
-    }
-}
-
+var postDelay = 350;
 
 // ======================================================================
 // Script Modules
@@ -30,28 +17,37 @@ class OviPostModule {
 //This module is used to automatically mass turn eggs for all your friends.
 class TurnEggsModule extends OviPostModule {
     constructor() {
-        super('TurnEggs', 'Turn Eggs', async () => {
-            creditsEarned = 0;
-            startTime = Date.now()
-            const friends = await this.getFriendList();
-            var eggCounter = 0;
-            var friendCounter = 0;
-            var totalFriends = friends.length;
-            while (friends.length > 0) {
-                while (PostQueue.length > 0) {
-                    await new Promise(r => setTimeout(r, 50));
-                }
-                var friend = friends.pop();
-                friendCounter++;
-                var eggs = await this.getEggs(friend);
-                eggCounter += eggs.length;
-                setStatus("Turning Eggs (" + friend + ")");
-                eggs.forEach(function(egg) {
-                    turnEgg(egg, friend);
-                });
-            }
-            setStatus("idle");
+        super('TurnEggs', 'Turn Eggs', (callback) => {
+            this.turnEggs(callback);
         });
+    }
+
+    async turnEggs(callback) {
+        creditsEarned = 0;
+        startTime = Date.now();
+        const friends = await this.getFriendList();
+        var eggCounter = 0;
+        var friendCounter = 0;
+
+        while (friends.length > 0) {
+            while (PostQueue.length > 0) {
+                await new Promise(r => setTimeout(r, 50));
+            }
+
+            var friend = friends.pop();
+            friendCounter++;
+            var eggs = await this.getEggs(friend);
+            eggCounter += eggs.length;
+            setStatus("Turning Eggs (" + friend + ")");
+            
+            eggs.forEach(function (egg) {
+                turnEgg(egg, friend);
+            });
+        }
+
+        setStatus("idle");
+        // Call the callback to reset the button's background color
+        callback();
     }
 
     async getFriendList() {
@@ -59,7 +55,7 @@ class TurnEggsModule extends OviPostModule {
         var ownID = getUserID();
         for (let page = 1; page < 20; page++) {
             const response = await sendGet("src=events&sub=feed&sec=friends&filter=all&Filter=all&page=" + page);
-            response.split('usr=').forEach(function(friend) {
+            response.split('usr=').forEach(function (friend) {
                 friend = friend.split('&amp').shift().split('\\').shift();
                 if (friend.length <= 20 && friend !== ownID && !friends.includes(friend)) {
                     friends.push(friend);
@@ -70,6 +66,13 @@ class TurnEggsModule extends OviPostModule {
                 break;
             }
         }
+
+        // Randomize the friends array using Fisher-Yates Shuffle
+        for (let i = friends.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [friends[i], friends[j]] = [friends[j], friends[i]];
+        }
+
         return friends;
     }
 
@@ -77,7 +80,7 @@ class TurnEggsModule extends OviPostModule {
         console.log("Get Eggs: " + userID);
         const response = await sendGet("src=pets&sub=hatchery&usr=" + userID);
         var eggs = [];
-        response.split('Turn Egg').forEach(function(egg) {
+        response.split('Turn Egg').forEach(function (egg) {
             if (!(egg.includes('to avoid') || egg.includes('exectime'))) {
                 egg = egg.split('pet=').pop().split('&').shift();
                 if (egg.length <= 10) {
@@ -90,12 +93,109 @@ class TurnEggsModule extends OviPostModule {
 }
 const turnEggsModule = new TurnEggsModule();
 
+//This module is used to automatically mass turn eggs for all your friends.
+class TurnEggsQuickModule extends OviPostModule {
+    constructor() {
+        super('TurnEggsQuick', 'Turn Eggs (Quick)', (callback) => {
+            creditsEarned = 0;
+            startTime = Date.now();
+            this.turnEggs(callback);
+        });
+    }
+
+    async turnEggs(callback) {
+        const friends = await this.getSortedUserIDs();
+        console.log(friends);
+        var eggCounter = 0;
+        var friendCounter = 0;
+
+        while (friends.length > 0) {
+            while (PostQueue.length > 0) {
+                await new Promise(r => setTimeout(r, 50));
+            }
+
+            var friend = friends.pop();
+            friendCounter++;
+            var eggs = await this.getEggs(friend);
+            eggCounter += eggs.length;
+            setStatus("Turning Eggs (" + friend + ")");
+            
+            eggs.forEach(function (egg) {
+                turnEgg(egg, friend);
+            });
+        }
+
+        setStatus("idle");
+        // Call the callback to reset the button's background color
+        callback();
+    }
+
+    async getSortedUserIDs() {
+        const creditThreshold = 10;
+        try {
+            if (!creditDB.db) {
+                await creditDB.openDatabase();
+            }
+
+            const objectStore = creditDB.db.transaction([creditDB.storeName], "readonly").objectStore(creditDB.storeName);
+
+            const userIDs = await new Promise((resolve, reject) => {
+                const getAllKeysRequest = objectStore.getAllKeys();
+                getAllKeysRequest.onsuccess = (event) => resolve(event.target.result);
+                getAllKeysRequest.onerror = (event) => reject("Error getting keys from store");
+            });
+
+            const fetchCreditsPromises = userIDs.map(async (userID) => ({
+                userID,
+                credits: (await creditDB.read(userID)).credits
+            }));
+
+            try {
+                const sortedUserIDs = await Promise.all(fetchCreditsPromises);
+
+                // Filter out users with credits less than creditThreshold
+                const filteredUserIDs = sortedUserIDs.filter(({ credits }) => credits > creditThreshold);
+
+                // Sort by credits in descending order
+                filteredUserIDs.sort((a, b) => b.credits - a.credits);
+
+                // Resolve with sorted user IDs
+                return filteredUserIDs.map(({ userID }) => userID);
+            } catch (error) {
+                // Reject if any of the promises fail
+                console.error("Error fetching credits:", error);
+                throw error;
+            }
+        } catch (error) {
+            console.error("Error in getSortedUserIDs:", error);
+            throw error;
+        }
+    }
+
+    async getEggs(userID) {
+        console.log("Get Eggs: " + userID);
+        const response = await sendGet("src=pets&sub=hatchery&usr=" + userID);
+        var eggs = [];
+        response.split('Turn Egg').forEach(function (egg) {
+            if (!(egg.includes('to avoid') || egg.includes('exectime'))) {
+                egg = egg.split('pet=').pop().split('&').shift();
+                if (egg.length <= 10) {
+                    eggs.push(egg);
+                }
+            }
+        });
+        return eggs;
+    }
+}
+const turnEggsQuickModule = new TurnEggsQuickModule();
+
+
 class HatchEggsModule extends OviPostModule {
     constructor() {
         super('HatchEggs', 'Hatch Eggs', async () => {
             const eggs = await this.getReadyToHatch();
 
-            eggs.forEach(function(egg) {
+            eggs.forEach(function (egg) {
                 turnEgg(egg);
             });
         });
@@ -105,7 +205,7 @@ class HatchEggsModule extends OviPostModule {
         const response = await sendGet("src=pets&sub=hatchery&usr=" + getUserID());
 
         const eggs = [];
-        response.split('Hatch Egg').forEach(function(egg) {
+        response.split('Hatch Egg').forEach(function (egg) {
             egg = egg.split('pet=').pop().split('&').shift();
             if (egg.length <= 10) {
                 eggs.push(egg);
@@ -124,7 +224,7 @@ class MassNameModule extends OviPostModule {
 
             var pets = [];
             if (document.URL.includes('sub=overview')) {
-                getSelectedPets().each(function() {
+                getSelectedPets().each(function () {
                     var petName = $(this).attr('title');
                     if (petName != name) {
                         pets.push($(this).attr('href').split('pet=').pop());
@@ -141,7 +241,7 @@ class MassNameModule extends OviPostModule {
                     alert("No pets found.");
                 }
             } else if (document.URL.includes('sub=hatchery')) {
-                $('img[width=120]').each(function() {
+                $('img[width=120]').each(function () {
                     pets.push($(this).attr('src').split('pet=').pop().split('&modified').shift());
                 });
 
@@ -159,14 +259,14 @@ class MassNameModule extends OviPostModule {
 const massNameModule = new MassNameModule();
 
 //Get tatoo data
-setInterval(function(){
+setInterval(function () {
     var updateButton = $("button:contains('Update'):not(.event-attached)");
 
     if (updateButton.length > 0) {
         console.log("Found button, attaching event.");
         updateButton.addClass("event-attached");
 
-        updateButton.click(function() {
+        updateButton.click(function () {
             var onclickValue = $(this).attr("onclick");
             console.log("Button clicked, onclick value:", onclickValue);
 
@@ -196,7 +296,7 @@ class MassTattooModule extends OviPostModule {
             // Prompt user to select an image
             tattooImage.click();
 
-            tattooImage.onchange = async function() {
+            tattooImage.onchange = async function () {
                 var file = tattooImage.files[0];
 
                 // Checking if file is selected
@@ -209,7 +309,7 @@ class MassTattooModule extends OviPostModule {
                 var binaryData;
                 await new Promise((resolve) => {
                     var reader = new FileReader();
-                    reader.onloadend = function() {
+                    reader.onloadend = function () {
                         binaryData = reader.result;
                         resolve();
                     }
@@ -217,11 +317,11 @@ class MassTattooModule extends OviPostModule {
                 });
 
                 // Convert binary string to Blob
-                var blobData = new Blob([binaryData], {type: file.type});
+                var blobData = new Blob([binaryData], { type: file.type });
 
                 var pets = [];
                 if (document.URL.includes('sub=overview')) {
-                    getSelectedPets().each(function() {
+                    getSelectedPets().each(function () {
                         pets.push($(this).attr('href').split('pet=').pop());
                     });
 
@@ -290,7 +390,7 @@ class MassDescModule extends OviPostModule {
             var text = prompt("Description:");
 
             var pets = [];
-            getSelectedPets().each(function() {
+            getSelectedPets().each(function () {
                 pets.push($(this).attr('href').split('pet=').pop());
             });
 
@@ -307,17 +407,17 @@ class MassDescModule extends OviPostModule {
 const massDescModule = new MassDescModule();
 
 class FeedPetsModule extends OviPostModule {
-  constructor() {
-    super('FeedPets', 'Feed Pets', async () => {
-      var count = 0;
-      $('li.selected').find('a.pet:not(.name)[href*="pet="]').each(function() {
-        var href = $(this).attr('href');
-        var PetID = href.split("pet=").pop();
-        feedPet(PetID);
-        count++;
-      });
-    });
-  }
+    constructor() {
+        super('FeedPets', 'Feed Pets', async () => {
+            var count = 0;
+            $('li.selected').find('a.pet:not(.name)[href*="pet="]').each(function () {
+                var href = $(this).attr('href');
+                var PetID = href.split("pet=").pop();
+                feedPet(PetID);
+                count++;
+            });
+        });
+    }
 }
 const feedPetsModule = new FeedPetsModule();
 
@@ -326,7 +426,7 @@ class MassBreedModule extends OviPostModule {
         super('MassBreed', 'Mass Breed', () => {
             function getPetIDs() {
                 var petIDs = [];
-                $('img[class="pet"]').each(function() {
+                $('img[class="pet"]').each(function () {
                     var href = $(this).attr('src');
                     if (href) {
                         petIDs.push(href.split("pet=").pop().split("&modified=").shift());
@@ -359,9 +459,9 @@ class MassBreedModule extends OviPostModule {
 }
 const massBreedModule = new MassBreedModule();
 
-
-$(document).ready(function() {
+$(document).ready(function () {
     turnEggsModule.render();
+    turnEggsQuickModule.render();
     hatchEggsModule.render();
     massNameModule.render();
     massDescModule.render();
@@ -370,56 +470,301 @@ $(document).ready(function() {
     massTattooModule.render();
 });
 
-
 // ======================================================================
-// Post Queue
+// JQuery and Regex (stuff that might change over time..)
 // ======================================================================
-var PostQueue = [];
-var successCount = 0; //number of successfull requests
-var failedCount = 0; //number of failed requests
 
-//Sends the server requests and handles API limiting
-function startPostQueue() {
-    setInterval(function() {
-        if (PostQueue.length > 0) {
-            var request = PostQueue.shift();
-            sendPost(request.url, request.body, request.meta)
-                .then(response => handlePostResponse(response, request)); // Pass the request as a parameter
-        }
-    }, postDelay);
+//Returns a list of PetID's of pets you currently have selected.
+function getSelectedPets() {
+    return $('li.selected').find('a.pet:not(.name)[href*="pet="]');
 }
 
-function handlePostResponse(response, request) {
-    if (response.meta != null) {
-        if (response.res.includes('failed')) {
-            if (response.res.includes('The answer is incorrect')) {
-                turnCaptchaEgg(request.body.PetID);
-            } else {
-                failedCount++;
-            }
-        } else if (response.res.includes('success')) {
-            successCount++;
+//Returns a list of PetID's that are currently loaded.
+// [WARNING]
+//  Every enclosure you open loads the pets to the current session.
+//  They will stay loaded during the session, even if you are not currently looking at the enclosure.
+//  The only way to unload them is to refresh the page.
+//  Best to stay away from using this since it may result into unexpected behaviour.
+function getLoadedPetIDs() {
+    return $('img[class="pet"]');
+}
+
+//Returns the container for the selection buttons that pops up when you select pets
+function findSelectNoneButtonContainer() {
+    return $('.ui-fieldset-body:visible').find('button:contains("Select None")').closest('.ui-fieldset-body:visible');
+}
+
+function getUsernameFromJSON(json) {
+    // Define the regex pattern
+    let pattern = /\$\(\'title\'\)\.html\(\"(.*?)\s*\|/;
+
+    // Test the pattern on the output string
+    let match = pattern.exec(json);
+
+    // If there is a match, return the first captured group
+    if (match) {
+        return match[1];
+    }
+    // If there is no match, return an empty string
+    else {
+        return "";
+    }
+}
+
+function getUserIDFromJSON(json) {
+    // Define the regex pattern
+    let pattern = /usr=(\d+)&amp/;
+
+    // Test the pattern on the output string
+    let match = pattern.exec(json);
+
+    // If there is a match, return the first captured group
+    if (match) {
+        return match[1];
+    }
+    // If there is no match, return an empty string
+    else {
+        return "";
+    }
+}
+
+//Get the number of credits displayed on the page
+function getCurrentCredits(){
+    // Use the jQuery selector to find the abbr element with the class 'credits'
+    const creditsElement = $('a[href="#!/?src=trading"] abbr.credits');
+
+    // Extract the title attribute, which contains the credit count
+    const creditsTitle = creditsElement.attr('title');
+
+    // Parse the credit count from the title attribute
+    const credits = parseInt(creditsTitle.replace(/[^0-9]/g, ''), 10);
+
+    return credits;
+}
+
+//Update number of credits displayed on the page
+function updateCredits(newCreditCount) {
+    // Format the credit count with a comma for thousands separation
+    const formattedCreditCount = newCreditCount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+    const creditsElement = $('abbr.credits');
+    creditsElement.text('');
+
+    const spanElement = $('<span>').text('Θ');
+
+    creditsElement.append(spanElement);
+    creditsElement.append(formattedCreditCount);
+    creditsElement.attr('title', formattedCreditCount + ' Credits');
+}
+
+//=====================================================
+//  Misc Functions
+//=====================================================
+
+// Usage in addToUserCredits
+async function addToUserCredits(userID, credits) {
+    try {
+        const existingRecord = await creditDB.read(userID);
+
+        if (existingRecord) {
+            // If the user exists, update the credits
+            existingRecord.credits += credits;
+            await creditDB.write(userID, existingRecord);
+        } else {
+            // If the user does not exist, create a new record
+            const record = { userID: userID, credits: credits };
+            await creditDB.write(userID, record);
         }
+    } catch (error) {
+        console.error("Error adding credits:", error);
     }
 }
 
 
-//Displays number of request still in queue
-function startPostQueueCounter(){
-    setInterval(function() {
-        if (PostQueue.length == 0) {
-            if ($("#postQueue")[0].innerHTML !== "Post Queue: 0") {
-                $("#postQueue")[0].innerHTML = "Post Queue: 0";
+// ======================================================================
+// Front End
+// ======================================================================
+
+// Create and append the script menu if it doesn't exist
+if (!document.getElementById("scriptMenu")) {
+    $("body").append(`
+    <div id="gmRightSideBar" style="
+        border-radius: 10px;
+        border-style: solid;
+        border-color: gray;
+        border-width: 3px;
+        ">
+        <ul id="scriptMenu">
+          <li><a id="scriptVersion">Version: ` + version + `</a></li>
+          <li><a id="statusText">Status: idle</a></li>
+          <li><a id="creditsGainedCounter">Credits Gained: 0</a></li>
+          <li><a id="postQueue">Post Queue: 0</a></li>
+          <li><a>Post Delay:  </a><input type="text" id="inpPostDelay" style="width: 40px;">
+          <input type="button" value="Save" id="btnSaveSettings" style="
+            width: 50px;
+            margin-left: 10px;
+      "></li>
+        </ul>
+    </div>
+  `);
+
+    const inputElement = document.getElementById('inpPostDelay');
+    const btnSaveSettings = document.getElementById('btnSaveSettings');
+
+    let inputValue = ""; // Initialize the variable to store the input value
+
+    inputElement.addEventListener('input', function () {
+        inputValue = inputElement.value.replace(/[^0-9]/g, ''); // Update the inputValue when the input changes
+    });
+
+    btnSaveSettings.addEventListener('click', async function () {
+        if (inputValue > 10 && inputValue !== "") {
+            try {
+                await settingsDB.write("postDelay", parseInt(inputValue, 10));
+                updatePostDelay(inputValue);
+            } catch (error) {
+                console.error("Error saving post delay to database:", error);
             }
         }
-    }, 1000);
+    });
+
+
 }
 
+function addCustomSelectionOptions() {
+    var buttonContainer = findSelectNoneButtonContainer();
+
+    if (buttonContainer.length > 0) {
+        // Element found, add the button
+        addCustomSelectionButtons();
+    } else {
+        // Element not found, wait and try again
+        setTimeout(addCustomSelectionOptions, 100);
+    }
+}
+
+function addCustomSelectionButtons() {
+    console.log("Adding custom selection buttons");
+    var selectNoneButton = $('.ui-input.btn button:contains("Select None")');
+
+    var buttonConfigs = [
+        {
+            text: "Test",
+            handler: function () {
+                alert("Test button clicked");
+            }
+        },
+        {
+            text: "Hide Bred",
+            handler: function () {
+                // Your logic to hide bred elements here
+            }
+        }
+        // Add more button configurations as needed
+    ];
+
+    // Iterate over the button configurations and create the buttons
+    buttonConfigs.forEach(function (config) {
+        var button = $('<button>').attr('type', 'button').addClass('ui-button ui-corner-all ui-widget').text(config.text);
+
+        // Insert the button next to the Select None button
+        selectNoneButton.after(button);
+
+        // Add click event handler for the button
+        button.click(config.handler);
+    });
+}
+
+
+// ======================================================================
+// Initiator
+// ======================================================================
+
+async function initialize() {
+    await startMacro();
+}
+
+async function startMacro() {
+
+    try {
+        creditDB = new DatabaseHandler("oviscript_creditDB", "CreditsFromEggs");
+        settingsDB = new DatabaseHandler("oviscript", "settings");
+
+        await loadSettings(settingsDB);
+
+        startPostQueue();
+
+        startPostQueueCounter();
+
+        addCustomSelectionOptions();
+    } catch (error) {
+        console.error("Error in startMacro:", error);
+    }
+}
+
+async function loadSettings(settingsDB) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let value = await settingsDB.read("postDelay");
+
+            // If the value exists, set the global variable and resolve the promise
+            if (value !== undefined && value !== null) {
+                postDelay = value;
+
+                // Set the value of the input box with ID 'inpPostDelay'
+                document.getElementById('inpPostDelay').value = postDelay;
+
+                resolve();
+            } else {
+                // If the value doesn't exist, write the default value
+                await settingsDB.write("postDelay", 350);
+
+                // Set the default value
+                postDelay = 350;
+
+                // Set the value of the input box with ID 'inpPostDelay'
+                document.getElementById('inpPostDelay').value = postDelay;
+
+                // Resolve the promise
+                resolve();
+            }
+        } catch (error) {
+            // Handle errors, you might want to log or reject the promise
+            console.error("Error loading settings:", error);
+            reject(error);
+        }
+    });
+}
+
+initialize();
 
 
 // ======================================================================
 // Ovipets API
 // ======================================================================
+
+class OviPostModule {
+    constructor(name, buttonText, clickHandler) {
+        this.name = name;
+        this.buttonText = buttonText;
+        this.clickHandler = clickHandler;
+    }
+
+    render() {
+        const buttonId = `btn${this.name}`;
+        $("#scriptMenu").append(`<li><input type="button" value="${this.buttonText}" id="${buttonId}"/></li>`);
+        const button = $(`#${buttonId}`);
+
+        button.on('click', () => {
+            button.css('background-color', 'lime');
+            this.clickHandler(() => {
+                // Callback to reset the background color after clickHandler is done
+                button.css('background-color', '');
+            });
+        });
+    }
+}
+
 
 class CaptchaSolver {
     constructor(id, species, answer) {
@@ -445,7 +790,6 @@ const captchaCodes = [
 function findCaptchaById(id) {
     return captchaCodes.find((captcha) => captcha.id === id);
 }
-
 
 function setStatus(newStatus) {
     $("#statusText")[0].innerHTML = "Status: " + newStatus;
@@ -548,10 +892,10 @@ function turnEgg(PetID, meta = null, answer = false) {
     }
 }
 
-async function turnCaptchaEgg(PetID, meta = null){
+async function turnCaptchaEgg(PetID, meta = null) {
     const data = await sendGet("src=pets&sub=profile&pet=" + PetID);
     let json = data.substring(data.indexOf('{'), data.lastIndexOf('}') + 1);
-
+    let userID = getUserIDFromJSON(json);
     var jsonObject = JSON.parse(json);
     var htmlString = jsonObject.output;
 
@@ -579,7 +923,7 @@ async function turnCaptchaEgg(PetID, meta = null){
         var elapsedTime = (Date.now() - startTime) / 60000;
         var creditsPerMinute = (creditsEarned / elapsedTime).toFixed(2);
 
-        $("#creditsGainedCounter")[0].innerHTML = "Credits Gained: " + creditsEarned + " ("+ creditsPerMinute + " c/m)";
+        $("#creditsGainedCounter")[0].innerHTML = "Credits Gained: " + creditsEarned + " (" + creditsPerMinute + " c/m)";
     }
 
     // Use regex to find the img src within the action attribute
@@ -600,14 +944,29 @@ async function turnCaptchaEgg(PetID, meta = null){
         if (modifiedMatch && modifiedMatch[1]) {
             let modifiedValue = modifiedMatch[1];
 
+            if (!modifiedValue) {
+                console.log("Couldn't find modified value in: " + modifiedMatch);
+            }
+
             const captcha = findCaptchaById(modifiedValue);
+
+            //Show in console if modified value is unknown.
+            if (!captcha) {
+                console.log("Modified value [" + modifiedValue + "] is not known")
+                console.log("Error, URL: " + "https://ovipets.com/#!/?src=pets&sub=profile&pet=" + PetID)
+                return;
+            }
+
             let answer = captcha.answer;
             let species = captcha.species
 
-            if(answer && species){
-                console.log('--Question PetID: ' + PetID +' Species: ' + species + " modifiedID: " + modifiedValue + " Answer Value: " + answer + " Credits: " + credits + " Total Credits Earned: " + creditsEarned);
+            if (answer && species) {
+                console.log('--Question PetID: ' + PetID + ' Species: ' + species + " modifiedID: " + modifiedValue + " Answer Value: " + answer + " Credits: " + credits + " Total Credits Earned: " + creditsEarned);
+                addToUserCredits(userID, credits);
                 turnEgg(PetID, meta, answer);
-            }else{
+                let creditsOnPage = getCurrentCredits();
+                updateCredits(creditsOnPage + credits);
+            } else {
                 alert("Couldn't solve captcha. PetID: " + PetID + " Species: " + species + " answer: " + answer + " modifiedID: " + modifiedValue);
                 console.log("--Couldn't solve captcha. PetID: " + PetID + " Species: " + species + " answer: " + answer + " modifiedID: " + modifiedValue);
             }
@@ -654,7 +1013,7 @@ function tagPet(PetID, TagID, Text) {
     });
 }
 
-function acceptAllFriendRequests(){
+function acceptAllFriendRequests() {
     PostQueue.push({
         url: 'https://ovipets.com/cmd.php',
         body: {
@@ -693,8 +1052,6 @@ async function sendPost(url, body, meta = null) {
     return { 'res': text, 'meta': meta };
 }
 
-
-
 async function sendGet(params) {
 
     while ((Date.now() - LastGet) < postDelay) {
@@ -714,108 +1071,225 @@ async function sendGet(params) {
 }
 
 // ======================================================================
-// JQuery and Regex (stuff that might change over time..)
+// Post Queue
 // ======================================================================
+var PostQueue = [];
+var successCount = 0; //number of successfull requests
+var failedCount = 0; //number of failed requests
+let postQueueInterval;
 
-//Returns a list of PetID's of pets you currently have selected.
-function getSelectedPets() {
-  return $('li.selected').find('a.pet:not(.name)[href*="pet="]');
+//Sends the server requests and handles API limiting
+function startPostQueue() {
+    postQueueInterval = setInterval(function () {
+        if (PostQueue.length > 0) {
+            var request = PostQueue.shift();
+            sendPost(request.url, request.body, request.meta)
+                .then(response => handlePostResponse(response, request));
+        }
+    }, postDelay);
 }
 
-//Returns a list of PetID's that are currently loaded.
-// [WARNING]
-//  Every enclosure you open loads the pets to the current session.
-//  They will stay loaded during the session, even if you are not currently looking at the enclosure.
-//  The only way to unload them is to refresh the page.
-//  Best to stay away from using this since it may result into unexpected behaviour.
-function getLoadedPetIDs(){
-    return $('img[class="pet"]');
-}
-
-//Returns the container for the selection buttons that pops up when you select pets
-function findSelectNoneButtonContainer() {
-    return $('.ui-fieldset-body:visible').find('button:contains("Select None")').closest('.ui-fieldset-body:visible');
-}
-
-
-// ======================================================================
-// Front End
-// ======================================================================
-
-// Create and append the script menu if it doesn't exist
-if (!document.getElementById("scriptMenu")) {
-    $("body").append(`
-    <div id="gmRightSideBar" style="
-        border-radius: 10px;
-        border-style: solid;
-        border-color: gray;
-        border-width: 3px;
-        ">
-        <ul id="scriptMenu">
-          <li><a id="statusText">Status: idle</a></li>
-          <li><a id="creditsGainedCounter">Credits Gained: 0</a></li>
-          <li><a id="postQueue">Post Queue: 0</a></li>
-        </ul>
-    </div>
-  `);
-}
-
-function addCustomSelectionOptions() {
-  var buttonContainer = findSelectNoneButtonContainer();
-
-  if (buttonContainer.length > 0) {
-    // Element found, add the button
-    addCustomSelectionButtons();
-  } else {
-    // Element not found, wait and try again
-    setTimeout(addCustomSelectionOptions, 100);
-  }
-}
-
-function addCustomSelectionButtons() {
-  console.log("Adding custom selection buttons");
-  var selectNoneButton = $('.ui-input.btn button:contains("Select None")');
-
-  var buttonConfigs = [
-    {
-      text: "Test",
-      handler: function() {
-        alert("Test button clicked");
-      }
-    },
-    {
-      text: "Hide Bred",
-      handler: function() {
-        // Your logic to hide bred elements here
-      }
-    }
-    // Add more button configurations as needed
-  ];
-
-  // Iterate over the button configurations and create the buttons
-  buttonConfigs.forEach(function(config) {
-    var button = $('<button>').attr('type', 'button').addClass('ui-button ui-corner-all ui-widget').text(config.text);
-
-    // Insert the button next to the Select None button
-    selectNoneButton.after(button);
-
-    // Add click event handler for the button
-    button.click(config.handler);
-  });
-}
-
-
-
-// ======================================================================
-// Initiator
-// ======================================================================
-
-function startMacro() {
+function updatePostDelay(newDelay) {
+    postDelay = newDelay;
+    clearInterval(postQueueInterval);
     startPostQueue();
-
-    startPostQueueCounter();
-
-    addCustomSelectionOptions();
 }
 
-startMacro();
+function handlePostResponse(response, request) {
+    if (response.meta != null) {
+        if (response.res.includes('failed')) {
+            if (response.res.includes('The answer is incorrect')) {
+                turnCaptchaEgg(request.body.PetID);
+            } else {
+                failedCount++;
+            }
+        } else if (response.res.includes('success')) {
+            successCount++;
+        }
+    }
+}
+
+//Displays number of request still in queue
+function startPostQueueCounter() {
+    setInterval(function () {
+        if (PostQueue.length == 0) {
+            if ($("#postQueue")[0].innerHTML !== "Post Queue: 0") {
+                $("#postQueue")[0].innerHTML = "Post Queue: 0";
+            }
+        }
+    }, 1000);
+}
+
+//=====================================================
+//  IndexedDB wrapper
+//=====================================================
+
+class DatabaseHandler {
+    constructor(dbName, storeName) {
+        this.dbName = dbName;
+        this.storeName = storeName;
+        this.db = null;
+        this.operationQueue = [];
+        this.isQueueRunning = false;
+    }
+
+    async openDatabase() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(this.dbName);
+
+            request.onerror = (event) => {
+                console.error("Error opening database:", event.target.errorCode);
+                reject("Error opening database");
+            };
+
+            request.onsuccess = (event) => {
+                this.db = event.target.result;
+                console.log("Database opened successfully");
+                resolve();
+            };
+
+            request.onupgradeneeded = (event) => {
+                const db = event.target.result;
+                console.log("Upgrade needed during database opening");
+                if (!db.objectStoreNames.contains(this.storeName)) {
+                    db.createObjectStore(this.storeName, { keyPath: "userID" });
+                    console.log("Object store created");
+                }
+            };
+
+            request.onblocked = (event) => {
+                console.warn("Database access blocked. Please close all tabs with this site and try again.");
+                reject("Database access blocked");
+            };
+        });
+    }
+
+    closeDatabase() {
+        if (this.db) {
+            this.db.close();
+            this.db = null;
+            console.log("Database closed");
+        }
+    }
+
+    async executeQueue() {
+        this.isQueueRunning = true;
+        try {
+            if (!this.db) {
+                await this.openDatabase();
+            }
+
+            while (this.operationQueue.length > 0) {
+                const operationFunction = this.operationQueue.shift();
+
+                await operationFunction();
+            }
+        } catch (error) {
+            console.error("Error executing queue:", error);
+        } finally {
+            this.isQueueRunning = false;
+            this.closeDatabase();
+        }
+    }
+
+    async addToQueue(callback) {
+        await this.queue;
+        return new Promise(async (resolve, reject) => {
+            try {
+                if (!this.db) {
+                    await this.openDatabase();
+                }
+
+                const transaction = this.db.transaction([this.storeName], "readonly");
+                transaction.oncomplete = () => {
+                    resolve();
+                };
+                transaction.onerror = (event) => {
+                    reject("Error performing transaction: " + event.target.errorCode);
+                };
+
+                await callback(transaction, resolve, reject);
+            } catch (error) {
+                reject(error);
+            } finally {
+                this.closeDatabase();
+            }
+        });
+    }
+
+    async read(key) {
+        return new Promise(async (resolve, reject) => {
+            await this.addToQueue(async () => {
+                try {
+                    const transaction = this.db.transaction([this.storeName], "readonly");
+                    const objectStore = transaction.objectStore(this.storeName);
+
+                    const request = objectStore.get(key);
+
+                    request.onsuccess = (event) => {
+                        const result = event.target.result;
+                        console.log("Read operation successful:", result);
+                        resolve(result);
+                    };
+
+                    request.onerror = (event) => {
+                        console.error("Error reading from database:", event.target.errorCode);
+                        reject("Error reading from database");
+                    };
+                } catch (error) {
+                    console.error("Error in read:", error);
+                    reject(error);
+                }
+            });
+        });
+    }
+
+
+
+    async write(key, data) {
+        return new Promise((resolve, reject) => {
+            this.addToQueue(async () => {
+                try {
+                    const transaction = this.db.transaction([this.storeName], "readwrite");
+                    const objectStore = transaction.objectStore(this.storeName);
+
+                    const request = objectStore.put(data, key);
+
+                    request.onsuccess = (event) => {
+                        console.log("Write operation successful");
+                        resolve();
+                    };
+
+                    request.onerror = (event) => {
+                        console.error("Error writing to database:", event.target.errorCode);
+                        reject("Error writing to database");
+                    };
+                } catch (error) {
+                    console.error("Error in write:", error);
+                    reject(error);
+                }
+            });
+        });
+    }
+
+
+    async executeComplexQuery(queryCallback, mode = "readonly") {
+        return new Promise(async (resolve, reject) => {
+            try {
+                if (!this.db) {
+                    await this.openDatabase();
+                }
+
+                const transaction = this.db.transaction([this.storeName], mode);
+                const objectStore = transaction.objectStore(this.storeName);
+
+                await queryCallback(objectStore, resolve, reject);
+            } catch (error) {
+                console.error("Error in executeComplexQuery:", error);
+                reject(error);
+            } finally {
+                this.closeDatabase();
+            }
+        });
+    }
+}
