@@ -1,44 +1,14 @@
-//Todo
-//Credit counter per friend to ignore friends that don't usually get you credits
-// 2] Adjustable postDelay
-// 3] Toggle to auto accept friend requests upon page load
-// 4] Auto friend adder (also check their home page for words that indicate they don't accept random invites)
-// 5] Update credits live
-//Instead of showing status also turn background-color of the buttons to lime
-
 console.log("Ovi Script Loaded");
 
-//Globar variables
-const version = "1.0.51";
+const version = "1.0.53";
 
 let creditDB;
 let settingsDB;
-  
+
 var creditsEarned = 0;
 var startTime;
 var LastGet = Date.now();
 var postDelay = 350;
-
-class OviPostModule {
-    constructor(name, buttonText, clickHandler) {
-        this.name = name;
-        this.buttonText = buttonText;
-        this.clickHandler = clickHandler;
-    }
-
-    render() {
-        const buttonId = `btn${this.name}`;
-        $("#scriptMenu").append(`<li><input type="button" value="${this.buttonText}" id="${buttonId}"/></li>`);
-        const button = $(`#${buttonId}`);
-        
-        button.on('click', () => {
-            button.css('background-color', 'lime');
-            this.clickHandler();
-            button.css('background-color', '');
-        });
-    }
-}
-
 
 // ======================================================================
 // Script Modules
@@ -47,27 +17,37 @@ class OviPostModule {
 //This module is used to automatically mass turn eggs for all your friends.
 class TurnEggsModule extends OviPostModule {
     constructor() {
-        super('TurnEggs', 'Turn Eggs', async () => {
-            creditsEarned = 0;
-            startTime = Date.now()
-            const friends = await this.getFriendList();
-            var eggCounter = 0;
-            var friendCounter = 0;
-            while (friends.length > 0) {
-                while (PostQueue.length > 0) {
-                    await new Promise(r => setTimeout(r, 50));
-                }
-                var friend = friends.pop();
-                friendCounter++;
-                var eggs = await this.getEggs(friend);
-                eggCounter += eggs.length;
-                setStatus("Turning Eggs (" + friend + ")");
-                eggs.forEach(function (egg) {
-                    turnEgg(egg, friend);
-                });
-            }
-            setStatus("idle");
+        super('TurnEggs', 'Turn Eggs', (callback) => {
+            this.turnEggs(callback);
         });
+    }
+
+    async turnEggs(callback) {
+        creditsEarned = 0;
+        startTime = Date.now();
+        const friends = await this.getFriendList();
+        var eggCounter = 0;
+        var friendCounter = 0;
+
+        while (friends.length > 0) {
+            while (PostQueue.length > 0) {
+                await new Promise(r => setTimeout(r, 50));
+            }
+
+            var friend = friends.pop();
+            friendCounter++;
+            var eggs = await this.getEggs(friend);
+            eggCounter += eggs.length;
+            setStatus("Turning Eggs (" + friend + ")");
+            
+            eggs.forEach(function (egg) {
+                turnEgg(egg, friend);
+            });
+        }
+
+        setStatus("idle");
+        // Call the callback to reset the button's background color
+        callback();
     }
 
     async getFriendList() {
@@ -116,90 +96,81 @@ const turnEggsModule = new TurnEggsModule();
 //This module is used to automatically mass turn eggs for all your friends.
 class TurnEggsQuickModule extends OviPostModule {
     constructor() {
-        super('TurnEggsQuick', 'Turn Eggs (Quick)', async () => {
+        super('TurnEggsQuick', 'Turn Eggs (Quick)', (callback) => {
             creditsEarned = 0;
-            startTime = Date.now()
-            console.log("finding friends..");
-            const friends = await this.getSortedUserIDs();
-            console.log(friends);
-            var eggCounter = 0;
-            var friendCounter = 0;
-            console.log("Before while loop");
-            while (friends.length > 0) {
-                while (PostQueue.length > 0) {
-                    await new Promise(r => setTimeout(r, 50));
-                }
-                console.log("Inside while loop");
-                var friend = friends.pop();
-                friendCounter++;
-                var eggs = await this.getEggs(friend);
-                eggCounter += eggs.length;
-                setStatus("Turning Eggs (" + friend + ")");
-                eggs.forEach(function (egg) {
-                    turnEgg(egg, friend);
-                });
-            }
-            console.log("After while loop");
-            setStatus("idle");
+            startTime = Date.now();
+            this.turnEggs(callback);
         });
     }
-    
+
+    async turnEggs(callback) {
+        const friends = await this.getSortedUserIDs();
+        console.log(friends);
+        var eggCounter = 0;
+        var friendCounter = 0;
+
+        while (friends.length > 0) {
+            while (PostQueue.length > 0) {
+                await new Promise(r => setTimeout(r, 50));
+            }
+
+            var friend = friends.pop();
+            friendCounter++;
+            var eggs = await this.getEggs(friend);
+            eggCounter += eggs.length;
+            setStatus("Turning Eggs (" + friend + ")");
+            
+            eggs.forEach(function (egg) {
+                turnEgg(egg, friend);
+            });
+        }
+
+        setStatus("idle");
+        // Call the callback to reset the button's background color
+        callback();
+    }
 
     async getSortedUserIDs() {
-        return new Promise(async (resolve, reject) => {
-            try {
-                const userIDs = await creditDB.executeComplexQuery(async (objectStore, resolve, reject) => {
-                    try {
-                        const getAllKeysRequest = objectStore.getAllKeys();
-    
-                        getAllKeysRequest.onsuccess = async (event) => {
-                            const sortedUserIDs = event.target.result;
-    
-                            // Fetch credits for each user in parallel
-                            const fetchCreditsPromises = sortedUserIDs.map(async (userID) => ({
-                                userID,
-                                credits: (await creditDB.read(userID)).credits
-                            }));
-    
-                            try {
-                                // Wait for all promises to complete
-                                const sortedUserIDs = await Promise.all(fetchCreditsPromises);
-    
-                                // Sort by credits in descending order
-                                sortedUserIDs.sort((a, b) => b.credits - a.credits);
-    
-                                // Log user IDs and corresponding credits to the console
-                                sortedUserIDs.forEach(({ userID, credits }) => {
-                                    console.log(`UserID: ${userID}, Credits: ${credits}`);
-                                });
-    
-                                // Resolve with sorted user IDs
-                                resolve(sortedUserIDs.map(({ userID }) => userID));
-                            } catch (error) {
-                                // Reject if any of the promises fail
-                                reject(error);
-                            }
-                        };
-    
-                        getAllKeysRequest.onerror = (event) => reject("Error getting keys from store");
-                    } catch (error) {
-                        reject(error);
-                    }
-                });
-            } catch (error) {
-                reject(error);
+        const creditThreshold = 10;
+        try {
+            if (!creditDB.db) {
+                await creditDB.openDatabase();
             }
-        });
+
+            const objectStore = creditDB.db.transaction([creditDB.storeName], "readonly").objectStore(creditDB.storeName);
+
+            const userIDs = await new Promise((resolve, reject) => {
+                const getAllKeysRequest = objectStore.getAllKeys();
+                getAllKeysRequest.onsuccess = (event) => resolve(event.target.result);
+                getAllKeysRequest.onerror = (event) => reject("Error getting keys from store");
+            });
+
+            const fetchCreditsPromises = userIDs.map(async (userID) => ({
+                userID,
+                credits: (await creditDB.read(userID)).credits
+            }));
+
+            try {
+                const sortedUserIDs = await Promise.all(fetchCreditsPromises);
+
+                // Filter out users with credits less than creditThreshold
+                const filteredUserIDs = sortedUserIDs.filter(({ credits }) => credits > creditThreshold);
+
+                // Sort by credits in descending order
+                filteredUserIDs.sort((a, b) => b.credits - a.credits);
+
+                // Resolve with sorted user IDs
+                return filteredUserIDs.map(({ userID }) => userID);
+            } catch (error) {
+                // Reject if any of the promises fail
+                console.error("Error fetching credits:", error);
+                throw error;
+            }
+        } catch (error) {
+            console.error("Error in getSortedUserIDs:", error);
+            throw error;
+        }
     }
-    
-      
-      
-      
-      
-      
-      
-      
-      
 
     async getEggs(userID) {
         console.log("Get Eggs: " + userID);
@@ -488,37 +459,6 @@ class MassBreedModule extends OviPostModule {
 }
 const massBreedModule = new MassBreedModule();
 
-class TestModule extends OviPostModule {
-    constructor() {
-        super('Test', 'Test', () => {
-            // Example usage
-            // Assume the database name is "creditsDB" and the object store name is "users"
-            // Assume the key is the userID and the value is an object with username and credits properties
-            // Write some data to the object store
-            writeIndexedDB("oviscript_creditDB", "CreditsFromEggs", "user1", { username: "Alice", credits: 100 });
-            writeIndexedDB("oviscript_creditDB", "test", "user2", { username: "Bob", credits: 200 });
-
-            // Read some data from the object store
-            // Use async/await syntax to handle the promise returned by the read function
-            (async function () {
-                // Get the username for user1
-                let username1 = await readIndexedDB("creditsDB", "test", "user1").then(function (value) {
-                    return value.username;
-                });
-                console.log("Username for user1 is", username1);
-
-                // Get the credits for user2
-                let credits2 = await readIndexedDB("creditsDB", "test", "user2").then(function (value) {
-                    return value.credits;
-                });
-                console.log("Credits for user2 are", credits2);
-            })();
-        });
-    }
-}
-
-const testModule = new TestModule();
-
 $(document).ready(function () {
     turnEggsModule.render();
     turnEggsQuickModule.render();
@@ -528,567 +468,8 @@ $(document).ready(function () {
     massBreedModule.render();
     feedPetsModule.render();
     massTattooModule.render();
-    testModule.render();
 });
 
-
-// ======================================================================
-// Post Queue
-// ======================================================================
-var PostQueue = [];
-var successCount = 0; //number of successfull requests
-var failedCount = 0; //number of failed requests
-let postQueueInterval;
-
-//Sends the server requests and handles API limiting
-function startPostQueue() {
-    console.log("Starting post queue, delay: " + postDelay);
-    postQueueInterval = setInterval(function () {
-        if (PostQueue.length > 0) {
-            console.log("Sending request");
-            var request = PostQueue.shift();
-            sendPost(request.url, request.body, request.meta)
-                .then(response => handlePostResponse(response, request)); // Pass the request as a parameter
-        }
-    }, postDelay);
-}
-
-function updatePostDelay(newDelay) {
-    console.log("Updating post delay: " + postDelay + "->" + newDelay);
-    postDelay = newDelay;
-    clearInterval(postQueueInterval);
-    startPostQueue();
-  }
-
-function handlePostResponse(response, request) {
-    if (response.meta != null) {
-        if (response.res.includes('failed')) {
-            if (response.res.includes('The answer is incorrect')) {
-                turnCaptchaEgg(request.body.PetID);
-            } else {
-                failedCount++;
-            }
-        } else if (response.res.includes('success')) {
-            successCount++;
-        }
-    }
-}
-
-
-//Displays number of request still in queue
-function startPostQueueCounter() {
-    setInterval(function () {
-        if (PostQueue.length == 0) {
-            if ($("#postQueue")[0].innerHTML !== "Post Queue: 0") {
-                $("#postQueue")[0].innerHTML = "Post Queue: 0";
-            }
-        }
-    }, 1000);
-}
-
-
-
-// ======================================================================
-// Ovipets API
-// ======================================================================
-
-class CaptchaSolver {
-    constructor(id, species, answer) {
-        this.id = id;
-        this.species = species;
-        this.answer = answer;
-    }
-}
-
-const captchaCodes = [
-    new CaptchaSolver("1696154319", "Canis", 23),
-    new CaptchaSolver("1614919856", "Draconis", 3),
-    new CaptchaSolver("1696154571", "Equus", 21),
-    new CaptchaSolver("1696153656", "Feline", 2),
-    new CaptchaSolver("1688169852", "Gekko", 15),
-    new CaptchaSolver("1677671012", "Lupus", 6),
-    new CaptchaSolver("1682925936", "Mantis", 37),
-    new CaptchaSolver("1682925576", "Raptor", 30),
-    new CaptchaSolver("1688175088", "Slime", 35),
-    new CaptchaSolver("1698842552", "Vulpes", 19)
-];
-
-function findCaptchaById(id) {
-    return captchaCodes.find((captcha) => captcha.id === id);
-}
-
-function setStatus(newStatus) {
-    $("#statusText")[0].innerHTML = "Status: " + newStatus;
-}
-
-function getUserID() {
-    return $($('.links')[0]).find('a')[0].href.split('usr=').pop();
-}
-
-// Name unnamed pet
-function namePet(PetID, Name) {
-    PostQueue.push({
-        url: 'https://ovipets.com/cmd.php',
-        body: {
-            'cmd': 'pet_name',
-            'PetID': PetID,
-            'Name': Name
-        },
-        meta: PetID
-    });
-}
-
-function addEnclosure(Label) {
-    PostQueue.push({
-        url: 'https://ovipets.com/cmd.php',
-        body: {
-            'cmd': 'enclosure_add',
-            'Presentation': '',
-            'Label': Label
-        },
-        meta: "enclosure_add"
-    });
-}
-
-// Name named pet
-function renamePet(PetID, Name) {
-    console.log("renaming: " + PetID + " " + Name);
-    PostQueue.push({
-        url: 'https://ovipets.com/cmd.php',
-        body: {
-            'cmd': 'pet_rename',
-            'PetID': PetID,
-            'Name': Name
-        },
-        meta: PetID
-    });
-}
-
-function feedPet(PetID) {
-    PostQueue.push({
-        url: 'https://ovipets.com/cmd.php',
-        body: {
-            'cmd': 'pet_feed',
-            'PetID': PetID
-        },
-        meta: "pet_feed"
-    });
-}
-
-function breedPets(MPetID, FPetID) {
-    PostQueue.push({
-        url: 'https://ovipets.com/cmd.php',
-        body: {
-            'cmd': 'pet_breed',
-            'MPetID': MPetID,
-            'FPetID': FPetID
-        },
-        meta: 'pet_breed'
-    });
-}
-
-function addPetDescription(PetID, Text) {
-    PostQueue.push({
-        url: 'https://ovipets.com/cmd.php',
-        body: {
-            'cmd': 'pet_presentation',
-            'PetID': PetID,
-            'Presentation': Text
-        },
-        meta: 'pet_presentation'
-    });
-}
-
-// Turn egg or hatch pet
-function turnEgg(PetID, meta = null, answer = false) {
-    var newElement = {
-        url: 'https://ovipets.com/cmd.php',
-        body: {
-            'cmd': 'pet_turn_egg',
-            'PetID': PetID
-        },
-        meta: meta
-    };
-
-    if (answer) {
-        newElement.body.Answer = answer;
-        PostQueue.unshift(newElement);
-    } else {
-        PostQueue.push(newElement);
-    }
-}
-
-async function turnCaptchaEgg(PetID, meta = null) {
-    const data = await sendGet("src=pets&sub=profile&pet=" + PetID);
-    let json = data.substring(data.indexOf('{'), data.lastIndexOf('}') + 1);
-    let userID = getUserIDFromJSON(json);
-    var jsonObject = JSON.parse(json);
-    var htmlString = jsonObject.output;
-
-    // Find the index where "Solve the following to earn" starts
-    let startIndex = htmlString.indexOf("Solve the following to earn");
-    let subString;
-
-    // If the phrase is found, create a substring starting from that phrase
-    if (startIndex !== -1) {
-        subString = htmlString.substring(startIndex);
-    } else {
-        console.log("Couldn't find 'Solve the following to earn' phrase");
-        return;
-    }
-
-    // Use regex to find the title attribute with credits
-    let creditsRegex = /title\s*=\s*\\'(\d+)\s*Credit/g;
-    let creditsMatch = creditsRegex.exec(subString);
-    let credits = 0;
-
-    if (creditsMatch && creditsMatch[1]) {
-        credits = parseInt(creditsMatch[1]);
-        creditsEarned += credits;
-
-        var elapsedTime = (Date.now() - startTime) / 60000;
-        var creditsPerMinute = (creditsEarned / elapsedTime).toFixed(2);
-
-        $("#creditsGainedCounter")[0].innerHTML = "Credits Gained: " + creditsEarned + " (" + creditsPerMinute + " c/m)";
-    }
-
-    // Use regex to find the img src within the action attribute
-    var regex = /img src = \\&quot;(.*?)\\&quot; title = \\&quot;Name the Species/g;
-    var match = regex.exec(htmlString);
-    var imageUrl;
-
-    if (match && match[1]) {
-        imageUrl = match[1].replace(/\\&quot;/g, '"');
-    }
-
-    if (imageUrl) {
-
-        // Use regex to find the modified value
-        var modifiedRegex = /modified=(\d+)/;
-        var modifiedMatch = modifiedRegex.exec(imageUrl);
-
-        if (modifiedMatch && modifiedMatch[1]) {
-            let modifiedValue = modifiedMatch[1];
-
-            if (!modifiedValue) {
-                console.log("Couldn't find modified value in: " + modifiedMatch);
-            }
-
-            const captcha = findCaptchaById(modifiedValue);
-
-            //Show in console if modified value is unknown.
-            if (!captcha) {
-                console.log("Modified value [" + modifiedValue + "] is not known")
-                console.log("Error, URL: " + "https://ovipets.com/#!/?src=pets&sub=profile&pet=" + PetID)
-                return;
-            }
-
-            let answer = captcha.answer;
-            let species = captcha.species
-
-            if (answer && species) {
-                console.log('--Question PetID: ' + PetID + ' Species: ' + species + " modifiedID: " + modifiedValue + " Answer Value: " + answer + " Credits: " + credits + " Total Credits Earned: " + creditsEarned);
-                addToUserCredits(userID, credits);
-                turnEgg(PetID, meta, answer);
-            } else {
-                alert("Couldn't solve captcha. PetID: " + PetID + " Species: " + species + " answer: " + answer + " modifiedID: " + modifiedValue);
-                console.log("--Couldn't solve captcha. PetID: " + PetID + " Species: " + species + " answer: " + answer + " modifiedID: " + modifiedValue);
-            }
-        }
-    } else {
-        console.log("Couldn't find question");
-    }
-}
-
-function sendPetToAdoptionCenter(PetID) {
-    PostQueue.push({
-        url: 'https://ovipets.com/cmd.php',
-        body: {
-            'cmd': 'pet_sendto',
-            'PetID': PetID,
-            'SendTo': 'adoption_center'
-        },
-        meta: PetID
-    });
-}
-
-function sendPetToEnclosure(PetID, Enclosure) {
-    PostQueue.push({
-        url: 'https://ovipets.com/cmd.php',
-        body: {
-            'cmd': 'pets_enclosure',
-            'PetID': PetID,
-            'Enclosure': Enclosure
-        },
-        meta: PetID
-    });
-}
-
-function tagPet(PetID, TagID, Text) {
-    PostQueue.push({
-        url: 'https://ovipets.com/cmd.php',
-        body: {
-            'cmd': 'pets_tag',
-            'PetID': PetID,
-            'Tag': TagID,
-            'Text': Text
-        },
-        meta: PetID
-    });
-}
-
-function acceptAllFriendRequests() {
-    PostQueue.push({
-        url: 'https://ovipets.com/cmd.php',
-        body: {
-            'cmd': 'friend_requests',
-            'Action': 'accept',
-            'Filter': 'requests'
-        },
-        meta: 'accept friend_requests'
-    });
-}
-
-
-
-async function sendPost(url, body, meta = null) {
-    $("#postQueue")[0].innerHTML = "Post Queue: " + PostQueue.length;
-
-    const params = new URLSearchParams();
-    for (const property in body) {
-        params.append(property, body[property]);
-    }
-    params.append('!jQuery360012094249696657289_1687776334529', ''); // Add specific query parameter
-
-    const fullUrl = url + '?' + params.toString();
-
-    const formData = new FormData();
-    for (const property in body) {
-        formData.append(property, body[property]);
-    }
-
-    const response = await fetch(fullUrl, {
-        method: 'POST',
-        body: formData,
-    });
-
-    const text = await response.text();
-    return { 'res': text, 'meta': meta };
-}
-
-async function sendGet(params) {
-
-    while ((Date.now() - LastGet) < postDelay) {
-        await new Promise(r => setTimeout(r, 50));
-    }
-    LastGet = Date.now();
-
-    const response = await fetch('https://ovipets.com/?' + params + "&_=1687772471015&!=jQuery360032008126278894555_1687773018994", {
-        method: 'GET',
-        headers: {
-            'Accept': 'text/javascript, application/javascript, application/ecmascript, application/x-ecmascript, */*; q=0.01'
-        }
-    });
-
-    var responseText = await response.text();
-    return responseText;
-}
-
-//=====================================================
-//  IndexedDB wrapper
-//=====================================================
-
-class DatabaseHandler {
-    constructor(dbName, storeName) {
-      this.dbName = dbName;
-      this.storeName = storeName;
-      this.db = null;
-    }
-  
-    openDatabase() {
-        return new Promise((resolve, reject) => {
-          console.log("Attempting to open database:", this.dbName);
-      
-          const request = indexedDB.open(this.dbName);
-      
-          request.onerror = (event) => {
-            console.error("Error opening database:", event.target.errorCode);
-            reject("Error opening database");
-          };
-      
-          request.onsuccess = (event) => {
-            this.db = event.target.result;
-            console.log("Database opened successfully");
-            resolve();
-          };
-      
-          request.onupgradeneeded = (event) => {
-            const db = event.target.result;
-            console.log("Upgrade needed during database opening");
-            if (!db.objectStoreNames.contains(this.storeName)) {
-              db.createObjectStore(this.storeName, { keyPath: "userID" });
-              console.log("Object store created");
-            }
-          };
-      
-          request.onblocked = (event) => {
-            console.warn("Database access blocked. Please close all tabs with this site and try again.");
-            reject("Database access blocked");
-          };
-        });
-      }
-      
-      
-  
-    closeDatabase() {
-      if (this.db) {
-        this.db.close();
-        this.db = null;
-        console.log("Database closed");
-      }
-    }
-  
-    async read(key) {
-      return new Promise(async (resolve, reject) => {
-        try {
-          if (!this.db) {
-            await this.openDatabase();
-          }
-  
-          const transaction = this.db.transaction([this.storeName], "readonly");
-          const objectStore = transaction.objectStore(this.storeName);
-  
-          const request = objectStore.get(key);
-  
-          request.onsuccess = (event) => {
-            const result = event.target.result;
-            console.log("Read operation successful:", result);
-            resolve(result);
-          };
-  
-          request.onerror = (event) => {
-            console.error("Error reading from database:", event.target.errorCode);
-            reject("Error reading from database");
-          };
-        } catch (error) {
-          console.error("Error in read:", error);
-          reject(error);
-        } finally {
-          this.closeDatabase();
-        }
-      });
-    }
-  
-    async write(key, data) {
-        return new Promise(async (resolve, reject) => {
-          try {
-            if (!this.db) {
-              await this.openDatabase();
-            }
-      
-            const transaction = this.db.transaction([this.storeName], "readwrite");
-            const objectStore = transaction.objectStore(this.storeName);
-      
-            const request = objectStore.put(data, key);
-      
-            request.onsuccess = (event) => {
-              console.log("Write operation successful");
-              resolve();
-            };
-      
-            request.onerror = (event) => {
-              console.error("Error writing to database:", event.target.errorCode);
-              reject("Error writing to database");
-            };
-          } catch (error) {
-            console.error("Error in write:", error);
-            reject(error);
-          } finally {
-            this.closeDatabase();
-          }
-        });
-      }
-      
-  
-    async executeComplexQuery(queryCallback) {
-      return new Promise(async (resolve, reject) => {
-        try {
-          if (!this.db) {
-            await this.openDatabase();
-          }
-  
-          const transaction = this.db.transaction([this.storeName], "readonly");
-          const objectStore = transaction.objectStore(this.storeName);
-  
-          await queryCallback(objectStore, resolve, reject);
-        } catch (error) {
-          console.error("Error in executeComplexQuery:", error);
-          reject(error);
-        } finally {
-          this.closeDatabase();
-        }
-      });
-    }
-}
-
-
-  
-async function addToUserCredits(userID, credits) {
-    try {
-      await creditDB.executeComplexQuery(async (objectStore, resolve, reject) => {
-        try {
-          // Check if the user already exists in the object store
-          const existingRecord = await creditDB.read(userID);
-  
-          // If the user exists, update the credits
-          if (existingRecord) {
-            // Get the current amount of credits
-            let currentCredits = existingRecord.credits;
-  
-            // Add the new amount of credits
-            let newCredits = currentCredits + credits;
-  
-            // Update the record with the new amount of credits
-            existingRecord.credits = newCredits;
-  
-            // Use the put operation to update the record
-            const updateRequest = objectStore.put(existingRecord);
-  
-            updateRequest.onsuccess = (event) => {
-              resolve();
-            };
-  
-            updateRequest.onerror = (event) => {
-              reject("Error updating record in the object store");
-            };
-          }
-          // If the user does not exist, create a new record
-          else {
-            // Create a new record with the given amount of credits
-            let record = { userID: userID, credits: credits };
-  
-            // Use the add operation to insert the new record
-            const addRequest = objectStore.add(record);
-  
-            addRequest.onsuccess = (event) => {
-              resolve();
-            };
-  
-            addRequest.onerror = (event) => {
-              reject("Error adding new record to the object store");
-            };
-          }
-        } catch (error) {
-          reject(error);
-        }
-      });
-    } catch (error) {
-      console.error("Error adding credits:", error);
-    }
-  }
-  
-  
-  
 // ======================================================================
 // JQuery and Regex (stuff that might change over time..)
 // ======================================================================
@@ -1116,37 +497,88 @@ function findSelectNoneButtonContainer() {
 function getUsernameFromJSON(json) {
     // Define the regex pattern
     let pattern = /\$\(\'title\'\)\.html\(\"(.*?)\s*\|/;
-  
+
     // Test the pattern on the output string
     let match = pattern.exec(json);
-  
+
     // If there is a match, return the first captured group
     if (match) {
-      return match[1];
+        return match[1];
     }
     // If there is no match, return an empty string
     else {
-      return "";
+        return "";
     }
-  }
+}
 
-  function getUserIDFromJSON(json) {
+function getUserIDFromJSON(json) {
     // Define the regex pattern
     let pattern = /usr=(\d+)&amp/;
-  
+
     // Test the pattern on the output string
     let match = pattern.exec(json);
-  
+
     // If there is a match, return the first captured group
     if (match) {
-      return match[1];
+        return match[1];
     }
     // If there is no match, return an empty string
     else {
-      return "";
+        return "";
     }
-  }
-  
+}
+
+//Get the number of credits displayed on the page
+function getCurrentCredits(){
+    // Use the jQuery selector to find the abbr element with the class 'credits'
+    const creditsElement = $('a[href="#!/?src=trading"] abbr.credits');
+
+    // Extract the title attribute, which contains the credit count
+    const creditsTitle = creditsElement.attr('title');
+
+    // Parse the credit count from the title attribute
+    const credits = parseInt(creditsTitle.replace(/[^0-9]/g, ''), 10);
+
+    return credits;
+}
+
+//Update number of credits displayed on the page
+function updateCredits(newCreditCount) {
+    // Format the credit count with a comma for thousands separation
+    const formattedCreditCount = newCreditCount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+    const creditsElement = $('abbr.credits');
+    creditsElement.text('');
+
+    const spanElement = $('<span>').text('Θ');
+
+    creditsElement.append(spanElement);
+    creditsElement.append(formattedCreditCount);
+    creditsElement.attr('title', formattedCreditCount + ' Credits');
+}
+
+//=====================================================
+//  Misc Functions
+//=====================================================
+
+// Usage in addToUserCredits
+async function addToUserCredits(userID, credits) {
+    try {
+        const existingRecord = await creditDB.read(userID);
+
+        if (existingRecord) {
+            // If the user exists, update the credits
+            existingRecord.credits += credits;
+            await creditDB.write(userID, existingRecord);
+        } else {
+            // If the user does not exist, create a new record
+            const record = { userID: userID, credits: credits };
+            await creditDB.write(userID, record);
+        }
+    } catch (error) {
+        console.error("Error adding credits:", error);
+    }
+}
 
 
 // ======================================================================
@@ -1176,26 +608,26 @@ if (!document.getElementById("scriptMenu")) {
     </div>
   `);
 
-  const inputElement = document.getElementById('inpPostDelay');
-  const btnSaveSettings = document.getElementById('btnSaveSettings');
-  
-  let inputValue = ""; // Initialize the variable to store the input value
-  
-  inputElement.addEventListener('input', function() {
-      inputValue = inputElement.value.replace(/[^0-9]/g, ''); // Update the inputValue when the input changes
-  });
-  
-  btnSaveSettings.addEventListener('click', async function() {
-      if (inputValue > 10 && inputValue !== "") {
-          try {
-              await settingsDB.write("postDelay", parseInt(inputValue, 10));
-              updatePostDelay(inputValue);
-          } catch (error) {
-              console.error("Error saving post delay to database:", error);
-          }
-      }
-  });
-  
+    const inputElement = document.getElementById('inpPostDelay');
+    const btnSaveSettings = document.getElementById('btnSaveSettings');
+
+    let inputValue = ""; // Initialize the variable to store the input value
+
+    inputElement.addEventListener('input', function () {
+        inputValue = inputElement.value.replace(/[^0-9]/g, ''); // Update the inputValue when the input changes
+    });
+
+    btnSaveSettings.addEventListener('click', async function () {
+        if (inputValue > 10 && inputValue !== "") {
+            try {
+                await settingsDB.write("postDelay", parseInt(inputValue, 10));
+                updatePostDelay(inputValue);
+            } catch (error) {
+                console.error("Error saving post delay to database:", error);
+            }
+        }
+    });
+
 
 }
 
@@ -1244,69 +676,64 @@ function addCustomSelectionButtons() {
 }
 
 
-
 // ======================================================================
 // Initiator
 // ======================================================================
 
-async function initialize(){
+async function initialize() {
     await startMacro();
 }
 
 async function startMacro() {
-    
+
     try {
         creditDB = new DatabaseHandler("oviscript_creditDB", "CreditsFromEggs");
-        settingsDB = new DatabaseHandler("oviscript","settings");
+        settingsDB = new DatabaseHandler("oviscript", "settings");
 
         await loadSettings(settingsDB);
-    
+
         startPostQueue();
-    
+
         startPostQueueCounter();
-    
+
         addCustomSelectionOptions();
-      } catch (error) {
+    } catch (error) {
         console.error("Error in startMacro:", error);
-      }
+    }
 }
 
 async function loadSettings(settingsDB) {
     return new Promise(async (resolve, reject) => {
-      try {
-        // Read the value from the database using the DatabaseHandler
-        let value = await settingsDB.read("postDelay");
-  
-        // If the value exists, set the global variable and resolve the promise
-        if (value !== undefined && value !== null) {
-          postDelay = value;
-  
-          // Set the value of the input box with ID 'inpPostDelay'
-          document.getElementById('inpPostDelay').value = postDelay;
-  
-          resolve();
-        } else {
-          // If the value doesn't exist, write the default value
-          await settingsDB.write("postDelay", 350);
-  
-          // Set the global variable to the default value
-          postDelay = defaultPostDelay;
-  
-          // Set the value of the input box with ID 'inpPostDelay'
-          document.getElementById('inpPostDelay').value = postDelay;
-  
-          // Resolve the promise
-          resolve();
+        try {
+            let value = await settingsDB.read("postDelay");
+
+            // If the value exists, set the global variable and resolve the promise
+            if (value !== undefined && value !== null) {
+                postDelay = value;
+
+                // Set the value of the input box with ID 'inpPostDelay'
+                document.getElementById('inpPostDelay').value = postDelay;
+
+                resolve();
+            } else {
+                // If the value doesn't exist, write the default value
+                await settingsDB.write("postDelay", 350);
+
+                // Set the default value
+                postDelay = 350;
+
+                // Set the value of the input box with ID 'inpPostDelay'
+                document.getElementById('inpPostDelay').value = postDelay;
+
+                // Resolve the promise
+                resolve();
+            }
+        } catch (error) {
+            // Handle errors, you might want to log or reject the promise
+            console.error("Error loading settings:", error);
+            reject(error);
         }
-      } catch (error) {
-        // Handle errors, you might want to log or reject the promise
-        console.error("Error loading settings:", error);
-        reject(error);
-      } finally {
-        // Close the database after the operation is completed
-        settingsDB.closeDatabase();
-      }
     });
-  }
-  
+}
+
 initialize();
