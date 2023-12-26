@@ -1,3 +1,6 @@
+//Todo
+// 1] Save modified ID, answer and species locally. and in case of an unknown ID let the user do the captcha and remember the answer.
+
 console.log("Ovi Script Loaded");
 
 const version = "1.0.53";
