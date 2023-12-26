@@ -1,3 +1,6 @@
+//Todo
+// 1] Save modified ID, answer and species locally. and in case of an unknown ID let the user do the captcha and remember the answer.
+
 console.log("Ovi Script Loaded");
 
 const version = "1.0.53";
@@ -9,6 +12,7 @@ var creditsEarned = 0;
 var startTime;
 var LastGet = Date.now();
 var postDelay = 350;
+var postDelay = 350;
 
 // ======================================================================
 // Script Modules
@@ -17,6 +21,37 @@ var postDelay = 350;
 //This module is used to automatically mass turn eggs for all your friends.
 class TurnEggsModule extends OviPostModule {
     constructor() {
+        super('TurnEggs', 'Turn Eggs', (callback) => {
+            this.turnEggs(callback);
+        });
+    }
+
+    async turnEggs(callback) {
+        creditsEarned = 0;
+        startTime = Date.now();
+        const friends = await this.getFriendList();
+        var eggCounter = 0;
+        var friendCounter = 0;
+
+        while (friends.length > 0) {
+            while (PostQueue.length > 0) {
+                await new Promise(r => setTimeout(r, 50));
+            }
+
+            var friend = friends.pop();
+            friendCounter++;
+            var eggs = await this.getEggs(friend);
+            eggCounter += eggs.length;
+            setStatus("Turning Eggs (" + friend + ")");
+            
+            eggs.forEach(function (egg) {
+                turnEgg(egg, friend);
+            });
+        }
+
+        setStatus("idle");
+        // Call the callback to reset the button's background color
+        callback();
         super('TurnEggs', 'Turn Eggs', (callback) => {
             this.turnEggs(callback);
         });
@@ -188,7 +223,6 @@ class TurnEggsQuickModule extends OviPostModule {
     }
 }
 const turnEggsQuickModule = new TurnEggsQuickModule();
-
 
 class HatchEggsModule extends OviPostModule {
     constructor() {
@@ -418,6 +452,17 @@ class FeedPetsModule extends OviPostModule {
             });
         });
     }
+    constructor() {
+        super('FeedPets', 'Feed Pets', async () => {
+            var count = 0;
+            $('li.selected').find('a.pet:not(.name)[href*="pet="]').each(function () {
+                var href = $(this).attr('href');
+                var PetID = href.split("pet=").pop();
+                feedPet(PetID);
+                count++;
+            });
+        });
+    }
 }
 const feedPetsModule = new FeedPetsModule();
 
@@ -461,6 +506,7 @@ const massBreedModule = new MassBreedModule();
 
 $(document).ready(function () {
     turnEggsModule.render();
+    turnEggsQuickModule.render();
     turnEggsQuickModule.render();
     hatchEggsModule.render();
     massNameModule.render();
