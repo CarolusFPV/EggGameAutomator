@@ -1,7 +1,3 @@
-//=====================================================
-//  IndexedDB wrapper
-//=====================================================
-
 class DatabaseHandler {
     constructor(dbName, storeName) {
         this.dbName = dbName;
@@ -78,7 +74,7 @@ class DatabaseHandler {
                     await this.openDatabase();
                 }
 
-                const transaction = this.db.transaction([this.storeName], "readonly");
+                const transaction = this.db.transaction([this.storeName], "readwrite");
                 transaction.oncomplete = () => {
                     resolve();
                 };
@@ -97,9 +93,8 @@ class DatabaseHandler {
 
     async read(key) {
         return new Promise(async (resolve, reject) => {
-            await this.addToQueue(async () => {
+            await this.addToQueue(async (transaction) => {
                 try {
-                    const transaction = this.db.transaction([this.storeName], "readonly");
                     const objectStore = transaction.objectStore(this.storeName);
 
                     const request = objectStore.get(key);
@@ -122,16 +117,13 @@ class DatabaseHandler {
         });
     }
 
-
-
     async write(key, data) {
         return new Promise((resolve, reject) => {
-            this.addToQueue(async () => {
+            this.addToQueue(async (transaction) => {
                 try {
-                    const transaction = this.db.transaction([this.storeName], "readwrite");
                     const objectStore = transaction.objectStore(this.storeName);
 
-                    const request = objectStore.put(data, key);
+                    const request = objectStore.put({ userID: key, ...data });
 
                     request.onsuccess = (event) => {
                         console.log("Write operation successful");
@@ -147,27 +139,6 @@ class DatabaseHandler {
                     reject(error);
                 }
             });
-        });
-    }
-
-
-    async executeComplexQuery(queryCallback, mode = "readonly") {
-        return new Promise(async (resolve, reject) => {
-            try {
-                if (!this.db) {
-                    await this.openDatabase();
-                }
-
-                const transaction = this.db.transaction([this.storeName], mode);
-                const objectStore = transaction.objectStore(this.storeName);
-
-                await queryCallback(objectStore, resolve, reject);
-            } catch (error) {
-                console.error("Error in executeComplexQuery:", error);
-                reject(error);
-            } finally {
-                this.closeDatabase();
-            }
         });
     }
 }

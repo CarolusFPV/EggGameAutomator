@@ -3,7 +3,7 @@
 
 console.log("Ovi Script Loaded");
 
-const version = "1.1.0";
+const version = "1.1.1";
 
 let creditDB;
 let settingsDB;
