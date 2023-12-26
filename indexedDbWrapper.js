@@ -26,7 +26,7 @@ class DatabaseHandler {
                 const db = event.target.result;
                 console.log("Upgrade needed during database opening");
                 if (!db.objectStoreNames.contains(this.storeName)) {
-                    db.createObjectStore(this.storeName, { keyPath: "userID" });
+                    db.createObjectStore(this.storeName);
                     console.log("Object store created");
                 }
             };
@@ -123,7 +123,7 @@ class DatabaseHandler {
                 try {
                     const objectStore = transaction.objectStore(this.storeName);
 
-                    const request = objectStore.put({ userID: key, ...data });
+                    const request = objectStore.put(data, key);
 
                     request.onsuccess = (event) => {
                         console.log("Write operation successful");

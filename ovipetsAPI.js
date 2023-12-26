@@ -7,6 +7,10 @@ class OviPostModule {
         this.name = name;
         this.buttonText = buttonText;
         this.clickHandler = clickHandler;
+
+        $(document).ready(() => {
+            this.render();
+        });
     }
 
     render() {
@@ -39,7 +43,7 @@ const captchaCodes = [
     new CaptchaSolver("1701390206", "Equus", 21),
     new CaptchaSolver("1696153656", "Feline", 2),
     new CaptchaSolver("1688169852", "Gekko", 15),
-    new CaptchaSolver("1677671012", "Lupus", 6),
+    new CaptchaSolver("1701390507", "Lupus", 6),
     new CaptchaSolver("1682925936", "Mantis", 37),
     new CaptchaSolver("1701390338", "Raptor", 30),
     new CaptchaSolver("1701390267", "Slime", 35),

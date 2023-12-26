@@ -3,7 +3,7 @@
 
 console.log("Ovi Script Loaded");
 
-const version = "1.1.1";
+const version = "1.1.2";
 
 let creditDB;
 let settingsDB;
@@ -95,6 +95,49 @@ class TurnEggsModule extends OviPostModule {
     }
 }
 const turnEggsModule = new TurnEggsModule();
+
+class AutoEggModule extends OviPostModule {
+    constructor() {
+        super('AutoEggs', 'Auto Eggs', (callback) => {
+            this.toggleAutoEgg(callback);
+        });
+
+        this.isAutoEggActive = false; // Track the toggle state
+        this.intervalId = null; // Track the interval for checking
+    }
+
+    toggleAutoEgg(callback) {
+        if (this.isAutoEggActive) {
+            // If currently active, stop checking and reset button color
+            clearInterval(this.intervalId);
+            callback();
+        } else {
+            // If not active, start checking
+            this.intervalId = setInterval(() => {
+                this.checkAndPressButton(callback);
+            }, 10000);
+        }
+
+        this.isAutoEggActive = !this.isAutoEggActive;
+    }
+
+    async checkAndPressButton() {
+        const turnEggsButton = document.getElementById('btnTurnEggs');
+
+        if (turnEggsButton) {
+            const backgroundColor = getComputedStyle(turnEggsButton).backgroundColor;
+
+            if (backgroundColor !== 'rgb(0, 255, 0)') {
+                // Button is not green, proceed with clicking
+                turnEggsButton.click();
+            }
+        }
+    }
+}
+
+
+const autoEggModule = new AutoEggModule();
+
 
 //This module is used to automatically mass turn eggs for all your friends.
 class TurnEggsQuickModule extends OviPostModule {
@@ -460,17 +503,6 @@ class MassBreedModule extends OviPostModule {
     }
 }
 const massBreedModule = new MassBreedModule();
-
-$(document).ready(function () {
-    turnEggsModule.render();
-    turnEggsQuickModule.render();
-    hatchEggsModule.render();
-    massNameModule.render();
-    massDescModule.render();
-    massBreedModule.render();
-    feedPetsModule.render();
-    massTattooModule.render();
-});
 
 // ======================================================================
 // JQuery and Regex (stuff that might change over time..)
