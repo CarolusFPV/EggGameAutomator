@@ -3,7 +3,7 @@
 
 console.log("Ovi Script Loaded");
 
-const version = "I love you ♥";
+const version = "Happy Birthday ♥";
 
 let creditDB;
 let settingsDB;
