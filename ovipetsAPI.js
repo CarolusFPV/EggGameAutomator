@@ -373,10 +373,25 @@ function updatePostDelay(newDelay) {
 function handlePostResponse(response, request) {
     if (response.meta != null) {
         if (response.res.includes('failed')) {
-            if (response.res.includes('The answer is incorrect')) {
-                turnCaptchaEgg(request.body.PetID);
-            } else {
-                failedCount++;
+            try {
+                // Remove leading and trailing parentheses if they exist
+                var cleanedResponse = response.res;
+                if (cleanedResponse.startsWith('(') && cleanedResponse.endsWith(')')) {
+                    cleanedResponse = cleanedResponse.slice(1, -1);
+                }
+
+                var parsedResponse = JSON.parse(cleanedResponse);
+                if (parsedResponse.message) {
+                    if (parsedResponse.message.includes('The answer is incorrect')) {
+                        turnCaptchaEgg(request.body.PetID);
+                    } else {
+                        displayErrorMessage(JSON.stringify(request.body) + " => " + parsedResponse.message);
+                    }
+                }
+            } catch (e) {
+                console.error('Error parsing response:', e);
+                // Optionally display the original response or a generic error message
+                displayErrorMessage(response.res);
             }
         } else if (response.res.includes('success')) {
             successCount++;

@@ -3,13 +3,14 @@
 // 2] Auto feed pets in the background and keep a database of all pets with their food value and last time checked
 // 3] module that reads notifications with callbacks. can be used to auto accept friend requests, trade requests, etc
 // 4] Move captcha codes list to a separate file
+// 5] Show post request error logs
 
 
 // Modified ID can be used anywhere to check what species a pet is, this may be useful somewhere
 
 console.log("Ovi Script Loaded");
 
-const version = "Happy Birthday ♥";
+const version = "V2.0";
 
 let creditDB;
 let settingsDB;
@@ -22,36 +23,6 @@ var postDelay = 350;
 // ======================================================================
 // Script Modules
 // ======================================================================
-
-class MassFriendRequestModule extends OviPostModule {
-    constructor() {
-        super('MassFriendRequest', 'Mass Friend Request', async () => {
-            const userIDs = await this.getUserIDs();
-
-            userIDs.forEach(function (userID) {
-                sendFriendRequest(userID);
-            });
-        });
-    }
-
-    async getUserIDs() {
-        const allUserLinks = $("a[href*='usr=']");
-
-        const userIDs = [];
-        allUserLinks.each(function () {
-            const href = $(this).attr('href');
-            const userID = href.match(/usr=(\d+)/)[1];
-            userIDs.push(userID);
-        });
-
-        return userIDs;
-    }
-}
-
-const massFriendRequestModule = new MassFriendRequestModule();
-
-
-
 
 //This module is used to automatically mass turn eggs for all your friends.
 class TurnEggsModule extends OviPostModule {
@@ -120,15 +91,22 @@ class TurnEggsModule extends OviPostModule {
         const response = await sendGet("src=pets&sub=hatchery&usr=" + userID);
         var eggs = [];
         response.split('Turn Egg').forEach(function (egg) {
-            if (!(egg.includes('to avoid') || egg.includes('exectime'))) {
-                egg = egg.split('pet=').pop().split('&').shift();
-                if (egg.length <= 10) {
-                    eggs.push(egg);
+            if (!egg.includes('to avoid automatic discard') && !egg.includes('exectime') && !egg.includes('Hatch Egg') && !egg.includes('{"type":"src"')) {
+                let valueStart = egg.indexOf("value = '");
+                if (valueStart !== -1) {
+                    let valueEnd = egg.indexOf("' style =", valueStart);
+                    if (valueEnd !== -1) {
+                        let eggValue = egg.substring(valueStart + "value = '".length, valueEnd);
+                        if (eggValue.length <= 10) {
+                            eggs.push(eggValue);
+                        }
+                    }
                 }
             }
         });
         return eggs;
     }
+    
 }
 const turnEggsModule = new TurnEggsModule();
 
@@ -654,6 +632,65 @@ async function addToUserCredits(userID, credits) {
 // ======================================================================
 // Front End
 // ======================================================================
+
+//Displays messages at the bottom of the page, used for http request errors
+function displayErrorMessage(message) {
+    var maxMessages = 5;
+    var messageContainerId = 'error-message-container';
+
+    // Create or get the message container
+    var messageContainer = document.getElementById(messageContainerId);
+    if (!messageContainer) {
+        messageContainer = document.createElement('div');
+        messageContainer.id = messageContainerId;
+        messageContainer.style.cssText = 'position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); background-color: rgba(0, 0, 0, 0.7); color: red; text-align: center; padding: 10px; border-radius: 10px; border: 1px solid black; z-index: 1000; font-size: 1.2em; font-weight: bold; overflow-y: hidden; max-height: 150px; white-space: nowrap; visibility: hidden;';
+        document.body.appendChild(messageContainer);
+    }
+
+    // Function to update the width of the message container
+    function updateContainerWidth() {
+        messageContainer.style.overflowY = 'hidden'; // Temporarily disable the scrollbar
+        messageContainer.style.visibility = 'visible'; // Ensure container is visible for width calculation
+        var containerWidth = Array.from(messageContainer.childNodes).reduce((maxWidth, node) => Math.max(maxWidth, node.scrollWidth), 0);
+        messageContainer.style.width = `${Math.min(containerWidth, window.innerWidth * 0.8)}px`;
+    }
+
+    // Create a new div element for the message
+    var newMessageDiv = document.createElement('div');
+    newMessageDiv.textContent = message;
+    newMessageDiv.style.opacity = 0; // Start with the div being transparent
+    newMessageDiv.style.transition = 'opacity 0.5s';
+    newMessageDiv.style.whiteSpace = 'nowrap'; // Prevent text from wrapping
+
+    // Add the new message to the container
+    messageContainer.appendChild(newMessageDiv);
+
+    // Update container width
+    updateContainerWidth();
+
+    // Fade in the new message
+    setTimeout(function() {
+        newMessageDiv.style.opacity = 1;
+    }, 100);
+
+    // Remove the oldest message if exceeding maxMessages
+    var messages = messageContainer.childNodes;
+    if (messages.length > maxMessages) {
+        var oldestMessage = messages[0];
+        oldestMessage.style.opacity = 0;
+        setTimeout(function() {
+            oldestMessage.remove();
+            // Readjust container width after removing a message
+            updateContainerWidth();
+        }, 500);
+    }
+}
+
+
+
+
+
+
 
 // Create and append the script menu if it doesn't exist
 if (!document.getElementById("scriptMenu")) {
