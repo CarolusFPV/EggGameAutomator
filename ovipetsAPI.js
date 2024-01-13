@@ -276,6 +276,18 @@ function tagPet(PetID, TagID, Text) {
     });
 }
 
+function sendFriendRequest(userID) {
+    PostQueue.push({
+        url: 'https://ovipets.com/cmd.php',
+        body: {
+            'cmd': 'friend_request',
+            'UserID': userID
+        },
+        meta: userID
+    });
+}
+
+
 function acceptAllFriendRequests() {
     PostQueue.push({
         url: 'https://ovipets.com/cmd.php',

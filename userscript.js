@@ -1,5 +1,11 @@
 //Todo
 // 1] Save modified ID, answer and species locally. and in case of an unknown ID let the user do the captcha and remember the answer.
+// 2] Auto feed pets in the background and keep a database of all pets with their food value and last time checked
+// 3] module that reads notifications with callbacks. can be used to auto accept friend requests, trade requests, etc
+// 4] Move captcha codes list to a separate file
+
+
+// Modified ID can be used anywhere to check what species a pet is, this may be useful somewhere
 
 console.log("Ovi Script Loaded");
 
@@ -16,6 +22,36 @@ var postDelay = 350;
 // ======================================================================
 // Script Modules
 // ======================================================================
+
+class MassFriendRequestModule extends OviPostModule {
+    constructor() {
+        super('MassFriendRequest', 'Mass Friend Request', async () => {
+            const userIDs = await this.getUserIDs();
+
+            userIDs.forEach(function (userID) {
+                sendFriendRequest(userID);
+            });
+        });
+    }
+
+    async getUserIDs() {
+        const allUserLinks = $("a[href*='usr=']");
+
+        const userIDs = [];
+        allUserLinks.each(function () {
+            const href = $(this).attr('href');
+            const userID = href.match(/usr=(\d+)/)[1];
+            userIDs.push(userID);
+        });
+
+        return userIDs;
+    }
+}
+
+const massFriendRequestModule = new MassFriendRequestModule();
+
+
+
 
 //This module is used to automatically mass turn eggs for all your friends.
 class TurnEggsModule extends OviPostModule {
@@ -677,6 +713,7 @@ function addCustomSelectionOptions() {
     }
 }
 
+//Custom buttons that appear when you open the multi pet selection menu
 function addCustomSelectionButtons() {
     console.log("Adding custom selection buttons");
     var selectNoneButton = $('.ui-input.btn button:contains("Select None")');
