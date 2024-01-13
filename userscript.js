@@ -633,10 +633,10 @@ async function addToUserCredits(userID, credits) {
 // Front End
 // ======================================================================
 
-//Displays messages at the bottom of the page, used for http request errors
 function displayErrorMessage(message) {
     var maxMessages = 5;
     var messageContainerId = 'error-message-container';
+    var messageDuration = 10000; // Duration for each message (10 seconds)
 
     // Create or get the message container
     var messageContainer = document.getElementById(messageContainerId);
@@ -653,6 +653,7 @@ function displayErrorMessage(message) {
         messageContainer.style.visibility = 'visible'; // Ensure container is visible for width calculation
         var containerWidth = Array.from(messageContainer.childNodes).reduce((maxWidth, node) => Math.max(maxWidth, node.scrollWidth), 0);
         messageContainer.style.width = `${Math.min(containerWidth, window.innerWidth * 0.8)}px`;
+        messageContainer.style.overflowY = 'auto'; // Re-enable the scrollbar
     }
 
     // Create a new div element for the message
@@ -673,6 +674,18 @@ function displayErrorMessage(message) {
         newMessageDiv.style.opacity = 1;
     }, 100);
 
+    // Set a timeout to remove the message after 10 seconds
+    setTimeout(function() {
+        if (newMessageDiv.parentNode) {
+            newMessageDiv.style.opacity = 0;
+            setTimeout(function() {
+                newMessageDiv.remove();
+                // Readjust container width after removing a message
+                updateContainerWidth();
+            }, 500); // Wait for fade out to finish
+        }
+    }, messageDuration);
+
     // Remove the oldest message if exceeding maxMessages
     var messages = messageContainer.childNodes;
     if (messages.length > maxMessages) {
@@ -685,6 +698,7 @@ function displayErrorMessage(message) {
         }, 500);
     }
 }
+
 
 
 
