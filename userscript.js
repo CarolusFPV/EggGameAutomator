@@ -4,13 +4,15 @@
 // 3] module that reads notifications with callbacks. can be used to auto accept friend requests, trade requests, etc
 // 4] Move captcha codes list to a separate file
 // 5] Show post request error logs
+// 6] periodically save all pet ID's to a databse for option #2
+// 7] Change mass name (selected) option to just mass name while on the hatchery page
+// 8] Make it so a client can disable module
+// 9] Hide the API domain by grabbing the current URL
 
 
 // Modified ID can be used anywhere to check what species a pet is, this may be useful somewhere
 
-console.log("Ovi Script Loaded");
-
-const version = "V2.0";
+const version = "V2.1";
 
 let creditDB;
 let settingsDB;
@@ -24,7 +26,6 @@ var postDelay = 350;
 // Script Modules
 // ======================================================================
 
-//This module is used to automatically mass turn eggs for all your friends.
 class TurnEggsModule extends OviPostModule {
     constructor() {
         super('TurnEggs', 'Turn Eggs', (callback) => {
@@ -56,7 +57,6 @@ class TurnEggsModule extends OviPostModule {
         }
 
         setStatus("idle");
-        // Call the callback to reset the button's background color
         callback();
     }
 
@@ -77,7 +77,7 @@ class TurnEggsModule extends OviPostModule {
             }
         }
 
-        // Randomize the friends array using Fisher-Yates Shuffle
+        // Randomize the friends array
         for (let i = friends.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [friends[i], friends[j]] = [friends[j], friends[i]];
@@ -251,12 +251,14 @@ const turnEggsQuickModule = new TurnEggsQuickModule();
 
 class HatchEggsModule extends OviPostModule {
     constructor() {
-        super('HatchEggs', 'Hatch Eggs', async () => {
+        super('HatchEggs', 'Hatch Eggs', async (callback) => {
             const eggs = await this.getReadyToHatch();
 
             eggs.forEach(function (egg) {
                 turnEgg(egg);
             });
+
+            callback();
         });
     }
 
@@ -278,7 +280,7 @@ const hatchEggsModule = new HatchEggsModule();
 
 class MassNameModule extends OviPostModule {
     constructor() {
-        super('MassName', 'Mass Name (Selected)', () => {
+        super('MassName', 'Mass Name (Selected)', (callback) => {
             var name = prompt("Name:");
 
             var pets = [];
@@ -312,12 +314,13 @@ class MassNameModule extends OviPostModule {
                     alert("No eggs found.");
                 }
             }
+            callback();
         });
     }
 }
 const massNameModule = new MassNameModule();
 
-//Get tatoo data
+//Systematically check page for Tattoo Update button in order to grab Tattoo data
 setInterval(function () {
     var updateButton = $("button:contains('Update'):not(.event-attached)");
 
@@ -344,27 +347,23 @@ setInterval(function () {
 
 class MassTattooModule extends OviPostModule {
     constructor() {
-        super('MassTattoo', 'Mass Tattoo (Selected)', () => {
-            // Create a hidden file input element
+        super('MassTattoo', 'Mass Tattoo (Selected)', (callback) => {
             var tattooImage = document.createElement('input');
             tattooImage.type = 'file';
             tattooImage.style.display = 'none';
             tattooImage.id = 'tattooImage';
             document.body.appendChild(tattooImage);
 
-            // Prompt user to select an image
             tattooImage.click();
 
             tattooImage.onchange = async function () {
                 var file = tattooImage.files[0];
 
-                // Checking if file is selected
                 if (!file) {
                     alert("Please select an image");
                     return;
                 }
 
-                // Read the file as binary string
                 var binaryData;
                 await new Promise((resolve) => {
                     var reader = new FileReader();
@@ -375,7 +374,6 @@ class MassTattooModule extends OviPostModule {
                     reader.readAsArrayBuffer(file);
                 });
 
-                // Convert binary string to Blob
                 var blobData = new Blob([binaryData], { type: file.type });
 
                 var pets = [];
@@ -384,7 +382,6 @@ class MassTattooModule extends OviPostModule {
                         pets.push($(this).attr('href').split('pet=').pop());
                     });
 
-                    // Ask user for additional parameters before the pet loop
                     var additionalParams = prompt("Please enter CropW, CropH, CropX, CropY, and Opacity, separated by a comma:");
                     var params = additionalParams.split(',');
 
@@ -415,7 +412,6 @@ class MassTattooModule extends OviPostModule {
                                 meta: 'tattoo_apply'
                             });
 
-                            // Add additional post request to the queue
                             PostQueue.push({
                                 url: 'https://ovipets.com/cmd.php',
                                 body: {
@@ -438,6 +434,7 @@ class MassTattooModule extends OviPostModule {
 
                 alert("All uploads queued!");
             }
+            callback();
         });
     }
 }
@@ -445,7 +442,7 @@ const massTattooModule = new MassTattooModule();
 
 class MassDescModule extends OviPostModule {
     constructor() {
-        super('MassDesc', 'Mass Desc (Selected)', () => {
+        super('MassDesc', 'Mass Desc (Selected)', (callback) => {
             var text = prompt("Description:");
 
             var pets = [];
@@ -460,6 +457,7 @@ class MassDescModule extends OviPostModule {
             } else {
                 alert("No pets found.");
             }
+            callback();
         });
     }
 }
@@ -467,7 +465,7 @@ const massDescModule = new MassDescModule();
 
 class FeedPetsModule extends OviPostModule {
     constructor() {
-        super('FeedPets', 'Feed Pets', async () => {
+        super('FeedPets', 'Feed Pets', async (callback) => {
             var count = 0;
             $('li.selected').find('a.pet:not(.name)[href*="pet="]').each(function () {
                 var href = $(this).attr('href');
@@ -475,6 +473,7 @@ class FeedPetsModule extends OviPostModule {
                 feedPet(PetID);
                 count++;
             });
+            callback();
         });
     }
 }
@@ -482,7 +481,7 @@ const feedPetsModule = new FeedPetsModule();
 
 class MassBreedModule extends OviPostModule {
     constructor() {
-        super('MassBreed', 'Mass Breed', () => {
+        super('MassBreed', 'Mass Breed', (callback) => {
             function getPetIDs() {
                 var petIDs = [];
                 $('img[class="pet"]').each(function () {
@@ -513,6 +512,7 @@ class MassBreedModule extends OviPostModule {
             } else {
                 alert("No pets found to breed with, make sure you have an enclosure selected under the Breeding tab.");
             }
+            callback();
         });
     }
 }
@@ -543,56 +543,42 @@ function findSelectNoneButtonContainer() {
 }
 
 function getUsernameFromJSON(json) {
-    // Define the regex pattern
     let pattern = /\$\(\'title\'\)\.html\(\"(.*?)\s*\|/;
 
-    // Test the pattern on the output string
     let match = pattern.exec(json);
 
-    // If there is a match, return the first captured group
     if (match) {
         return match[1];
     }
-    // If there is no match, return an empty string
     else {
         return "";
     }
 }
 
 function getUserIDFromJSON(json) {
-    // Define the regex pattern
     let pattern = /usr=(\d+)&amp/;
 
-    // Test the pattern on the output string
     let match = pattern.exec(json);
 
-    // If there is a match, return the first captured group
     if (match) {
         return match[1];
     }
-    // If there is no match, return an empty string
     else {
         return "";
     }
 }
 
-//Get the number of credits displayed on the page
 function getCurrentCredits(){
-    // Use the jQuery selector to find the abbr element with the class 'credits'
     const creditsElement = $('a[href="#!/?src=trading"] abbr.credits');
 
-    // Extract the title attribute, which contains the credit count
     const creditsTitle = creditsElement.attr('title');
 
-    // Parse the credit count from the title attribute
     const credits = parseInt(creditsTitle.replace(/[^0-9]/g, ''), 10);
 
     return credits;
 }
 
-//Update number of credits displayed on the page
 function updateCredits(newCreditCount) {
-    // Format the credit count with a comma for thousands separation
     const formattedCreditCount = newCreditCount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
     const creditsElement = $('abbr.credits');
@@ -609,17 +595,14 @@ function updateCredits(newCreditCount) {
 //  Misc Functions
 //=====================================================
 
-// Usage in addToUserCredits
 async function addToUserCredits(userID, credits) {
     try {
         const existingRecord = await creditDB.read(userID);
 
         if (existingRecord) {
-            // If the user exists, update the credits
             existingRecord.credits += credits;
             await creditDB.write(userID, existingRecord);
         } else {
-            // If the user does not exist, create a new record
             const record = { userID: userID, credits: credits };
             await creditDB.write(userID, record);
         }
@@ -636,77 +619,57 @@ async function addToUserCredits(userID, credits) {
 function displayErrorMessage(message) {
     var maxMessages = 5;
     var messageContainerId = 'error-message-container';
-    var messageDuration = 10000; // Duration for each message (10 seconds)
+    var messageDuration = 10000; // Duration for each message in ms
 
-    // Create or get the message container
     var messageContainer = document.getElementById(messageContainerId);
     if (!messageContainer) {
         messageContainer = document.createElement('div');
         messageContainer.id = messageContainerId;
-        messageContainer.style.cssText = 'position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); background-color: rgba(0, 0, 0, 0.7); color: red; text-align: center; padding: 10px; border-radius: 10px; border: 1px solid black; z-index: 1000; font-size: 1.2em; font-weight: bold; overflow-y: hidden; max-height: 150px; white-space: nowrap; visibility: hidden;';
+        messageContainer.style.cssText = 'position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); background-color: rgba(0, 0, 0, 0.7); color: red; text-align: center; padding: 10px; border-radius: 10px; border: 1px solid black; z-index: 1000; font-size: 1.2em; font-weight: bold; overflow: hidden; max-height: 150px; white-space: nowrap; visibility: hidden;';
         document.body.appendChild(messageContainer);
     }
 
-    // Function to update the width of the message container
     function updateContainerWidth() {
-        messageContainer.style.overflowY = 'hidden'; // Temporarily disable the scrollbar
-        messageContainer.style.visibility = 'visible'; // Ensure container is visible for width calculation
+        messageContainer.style.visibility = 'visible';
         var containerWidth = Array.from(messageContainer.childNodes).reduce((maxWidth, node) => Math.max(maxWidth, node.scrollWidth), 0);
         messageContainer.style.width = `${Math.min(containerWidth, window.innerWidth * 0.8)}px`;
-        messageContainer.style.overflowY = 'auto'; // Re-enable the scrollbar
     }
 
-    // Create a new div element for the message
     var newMessageDiv = document.createElement('div');
     newMessageDiv.textContent = message;
-    newMessageDiv.style.opacity = 0; // Start with the div being transparent
+    newMessageDiv.style.opacity = 0;
     newMessageDiv.style.transition = 'opacity 0.5s';
-    newMessageDiv.style.whiteSpace = 'nowrap'; // Prevent text from wrapping
+    newMessageDiv.style.whiteSpace = 'nowrap';
 
-    // Add the new message to the container
     messageContainer.appendChild(newMessageDiv);
 
-    // Update container width
     updateContainerWidth();
 
-    // Fade in the new message
     setTimeout(function() {
         newMessageDiv.style.opacity = 1;
     }, 100);
 
-    // Set a timeout to remove the message after 10 seconds
     setTimeout(function() {
         if (newMessageDiv.parentNode) {
             newMessageDiv.style.opacity = 0;
             setTimeout(function() {
                 newMessageDiv.remove();
-                // Readjust container width after removing a message
                 updateContainerWidth();
-            }, 500); // Wait for fade out to finish
+            }, 500);
         }
     }, messageDuration);
 
-    // Remove the oldest message if exceeding maxMessages
     var messages = messageContainer.childNodes;
     if (messages.length > maxMessages) {
         var oldestMessage = messages[0];
         oldestMessage.style.opacity = 0;
         setTimeout(function() {
             oldestMessage.remove();
-            // Readjust container width after removing a message
             updateContainerWidth();
         }, 500);
     }
 }
 
-
-
-
-
-
-
-
-// Create and append the script menu if it doesn't exist
 if (!document.getElementById("scriptMenu")) {
     $("body").append(`
     <div id="gmRightSideBar" style="
@@ -732,10 +695,10 @@ if (!document.getElementById("scriptMenu")) {
     const inputElement = document.getElementById('inpPostDelay');
     const btnSaveSettings = document.getElementById('btnSaveSettings');
 
-    let inputValue = ""; // Initialize the variable to store the input value
+    let inputValue = "";
 
     inputElement.addEventListener('input', function () {
-        inputValue = inputElement.value.replace(/[^0-9]/g, ''); // Update the inputValue when the input changes
+        inputValue = inputElement.value.replace(/[^0-9]/g, '');
     });
 
     btnSaveSettings.addEventListener('click', async function () {
@@ -756,15 +719,12 @@ function addCustomSelectionOptions() {
     var buttonContainer = findSelectNoneButtonContainer();
 
     if (buttonContainer.length > 0) {
-        // Element found, add the button
         addCustomSelectionButtons();
     } else {
-        // Element not found, wait and try again
         setTimeout(addCustomSelectionOptions, 100);
     }
 }
 
-//Custom buttons that appear when you open the multi pet selection menu
 function addCustomSelectionButtons() {
     console.log("Adding custom selection buttons");
     var selectNoneButton = $('.ui-input.btn button:contains("Select None")');
@@ -779,20 +739,16 @@ function addCustomSelectionButtons() {
         {
             text: "Hide Bred",
             handler: function () {
-                // Your logic to hide bred elements here
+                // To be made.. 
             }
         }
-        // Add more button configurations as needed
     ];
 
-    // Iterate over the button configurations and create the buttons
     buttonConfigs.forEach(function (config) {
         var button = $('<button>').attr('type', 'button').addClass('ui-button ui-corner-all ui-widget').text(config.text);
 
-        // Insert the button next to the Select None button
         selectNoneButton.after(button);
 
-        // Add click event handler for the button
         button.click(config.handler);
     });
 }
@@ -829,29 +785,22 @@ async function loadSettings(settingsDB) {
         try {
             let value = await settingsDB.read("postDelay");
 
-            // If the value exists, set the global variable and resolve the promise
             if (value !== undefined && value !== null) {
                 postDelay = value;
 
-                // Set the value of the input box with ID 'inpPostDelay'
                 document.getElementById('inpPostDelay').value = postDelay;
 
                 resolve();
             } else {
-                // If the value doesn't exist, write the default value
                 await settingsDB.write("postDelay", 350);
 
-                // Set the default value
                 postDelay = 350;
 
-                // Set the value of the input box with ID 'inpPostDelay'
                 document.getElementById('inpPostDelay').value = postDelay;
 
-                // Resolve the promise
                 resolve();
             }
         } catch (error) {
-            // Handle errors, you might want to log or reject the promise
             console.error("Error loading settings:", error);
             reject(error);
         }
