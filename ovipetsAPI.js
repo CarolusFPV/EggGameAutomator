@@ -21,7 +21,6 @@ class OviPostModule {
         button.on('click', () => {
             button.css('background-color', 'lime');
             this.clickHandler(() => {
-                // Callback to reset the background color after clickHandler is done
                 button.css('background-color', '');
             });
         });
@@ -41,7 +40,7 @@ const captchaCodes = [
     new CaptchaSolver("1702424664", "Canis", 23),
     new CaptchaSolver("1614919856", "Draconis", 3),
     new CaptchaSolver("1701390206", "Equus", 21),
-    new CaptchaSolver("1696153656", "Feline", 2),
+    new CaptchaSolver("1705657317", "Feline", 2),
     new CaptchaSolver("1688169852", "Gekko", 15),
     new CaptchaSolver("1701390507", "Lupus", 6),
     new CaptchaSolver("1682925936", "Mantis", 37),
