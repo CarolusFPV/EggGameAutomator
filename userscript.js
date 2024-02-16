@@ -804,7 +804,7 @@ if (!document.getElementById("gmRightSideBar")) {
     `);
 
     $(document).mousemove(function(e) {
-        if ($(window).width() - e.clientX < 70) {
+        if ($(window).width() - e.clientX < 100) {
             $("#gmRightSideBar").fadeIn();
         }
     });
