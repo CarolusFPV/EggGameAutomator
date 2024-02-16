@@ -12,7 +12,7 @@
 
 // Modified ID can be used anywhere to check what species a pet is, this may be useful somewhere
 
-const version = "V2.2.5";
+const version = "V2.3";
 
 let creditDB;
 let settingsDB;
@@ -523,7 +523,6 @@ class CountPetsModule extends OviPostModule {
         super('CountPets', 'Count Pets', async (callback) => {
             let enclosure_id = getCurrentEnclosure();
             const petIDs = await this.fetchPets(enclosure_id, getFocusedUserID());
-            console.log("--petIds: ", petIDs);
             alert(petIDs.length + " Pets in enclosure: " + enclosure_id);
             callback();
         });
@@ -547,7 +546,6 @@ class CountPetsModule extends OviPostModule {
             const response = await fetch(url);
 
             if (response.ok) {
-                console.log("--response.ok")
                 const data = await response.json();
                 return this.handlePostResponse(data, {body: params});
             } else {
@@ -563,15 +561,11 @@ class CountPetsModule extends OviPostModule {
     }
 
     handlePostResponse(response, request) {
-        console.log("--handlePostResponse: ",response);
-        console.log("--response.output: ", response.output)
         if (response.output) {
-            console.log("--Success")
             try {
                 let responseText = response.output;
                 const petIdPattern = /PetID\[\]' value = '(\d+)/g;
                 let petIds = [...responseText.matchAll(petIdPattern)].map(match => match[1]);
-                console.log("--pet_ids: ", petIds);
                 return petIds;
                 
             } catch (e) {
