@@ -12,7 +12,7 @@
 
 // Modified ID can be used anywhere to check what species a pet is, this may be useful somewhere
 
-const version = "V2.1";
+const version = "V2.2";
 
 let creditDB;
 let settingsDB;
@@ -766,19 +766,19 @@ function displayErrorMessage(message) {
     }
 }
 
-if (!document.getElementById("scriptMenu")) {
+if (!document.getElementById("gmRightSideBar")) {
     $("body").append(`
         <div id="gmRightSideBar" style="
+            display: none; /* Initially hide gmRightSideBar */
             border-radius: 10px;
             border-style: solid;
             border-color: gray;
             border-width: 3px;
-            position: fixed; /* Example to make it always accessible */
+            position: fixed; /* Make it always accessible */
             right: 0; /* Align to the right side */
-            top: 50%; /* Position at the middle of the screen */
+            cursor: pointer; /* Change cursor to indicate it's interactive */
         ">
             <ul id="scriptMenu" style="
-                display: none; /* Hide initially */
                 list-style-type: none; /* Remove bullet points */
                 padding: 0; /* Remove padding */
             ">
@@ -786,38 +786,36 @@ if (!document.getElementById("scriptMenu")) {
                 <li><a id="statusText">Status: idle</a></li>
                 <li><a id="creditsGainedCounter">Credits Gained: 0</a></li>
                 <li><a id="postQueue">Post Queue: 0</a></li>
-                <li><a>Post Delay:  </a><input type="text" id="inpPostDelay" style="width: 40px;">
+                <li><a>Post Delay: </a><input type="text" id="inpPostDelay" style="width: 40px;">
                 <input type="button" value="Save" id="btnSaveSettings" style="
                     width: 50px;
                     margin-left: 10px;
-            "></li>
+                "></li>
             </ul>
         </div>
     `);
 
-
-    // Toggle visibility of scriptMenu on hover of gmRightSideBar
-    $("#gmRightSideBar").hover(
-        function() {
-            // Mouse enter: Show scriptMenu
-            $("#scriptMenu").stop(true, true).fadeIn();
-        },
-        function() {
-            // Mouse leave: Hide scriptMenu
-            $("#scriptMenu").stop(true, true).fadeOut();
+    // Functionality to show gmRightSideBar when the mouse is near the right edge of the screen
+    $(document).mousemove(function(e) {
+        if ($(window).width() - e.clientX < 50) { // Adjust as needed
+            $("#gmRightSideBar").fadeIn();
         }
-    );
+    });
+
+    $("#gmRightSideBar").mouseleave(function() {
+        $(this).fadeOut();
+    });
 
     const inputElement = document.getElementById('inpPostDelay');
     const btnSaveSettings = document.getElementById('btnSaveSettings');
 
     let inputValue = "";
 
-    inputElement.addEventListener('input', function () {
+    inputElement.addEventListener('input', function() {
         inputValue = inputElement.value.replace(/[^0-9]/g, '');
     });
 
-    btnSaveSettings.addEventListener('click', async function () {
+    btnSaveSettings.addEventListener('click', async function() {
         if (inputValue > 10 && inputValue !== "") {
             try {
                 await settingsDB.write("postDelay", parseInt(inputValue, 10));
@@ -827,9 +825,8 @@ if (!document.getElementById("scriptMenu")) {
             }
         }
     });
-
-
 }
+
 
 function addCustomSelectionOptions() {
     var buttonContainer = findSelectNoneButtonContainer();
