@@ -12,7 +12,7 @@
 
 // Modified ID can be used anywhere to check what species a pet is, this may be useful somewhere
 
-const version = "V2.2.4";
+const version = "V2.2.5";
 
 let creditDB;
 let settingsDB;
@@ -677,7 +677,7 @@ function getCurrentCredits(){
 function updateCredits(newCreditCount) {
     const formattedCreditCount = newCreditCount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
-    const creditsElement = $('abbr.credits');
+    const creditsElement = $('abbr.credits').first();
     creditsElement.text('');
 
     const spanElement = $('<span>').text('Θ');
@@ -686,6 +686,7 @@ function updateCredits(newCreditCount) {
     creditsElement.append(formattedCreditCount);
     creditsElement.attr('title', formattedCreditCount + ' Credits');
 }
+
 
 //=====================================================
 //  Misc Functions
