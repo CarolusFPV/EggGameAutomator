@@ -521,8 +521,9 @@ const massBreedModule = new MassBreedModule();
 class CountPetsModule extends OviPostModule {
     constructor() {
         super('CountPets', 'Count Pets', async (callback) => {
-            const petIDs = await this.fetchPets(this.getCurrentEnclosure(), this.getFocusedUserID());
-            alert(petIDs.length + " Pets in enclosure: " + this.getCurrentEnclosure());
+            let enclosure_id = getCurrentEnclosure();
+            const petIDs = await this.fetchPets(enclosure_id, getFocusedUserID());
+            alert(petIDs.length + " Pets in enclosure: " + enclosure_id);
             callback();
         });
     }
