@@ -802,9 +802,8 @@ if (!document.getElementById("gmRightSideBar")) {
         </div>
     `);
 
-    // Functionality to show gmRightSideBar when the mouse is near the right edge of the screen
     $(document).mousemove(function(e) {
-        if ($(window).width() - e.clientX < 50) { // Adjust as needed
+        if ($(window).width() - e.clientX < 70) {
             $("#gmRightSideBar").fadeIn();
         }
     });
