@@ -308,7 +308,7 @@ async function sendPost(url, body, meta = null) {
     for (const property in body) {
         params.append(property, body[property]);
     }
-    params.append('!jQuery360012094249696657289_1687776334529', ''); // Add specific query parameter
+    params.append('!', ''); // Add specific query parameter
 
     const fullUrl = url + '?' + params.toString();
 

@@ -1,13 +1,13 @@
 //Todo
+// 11] Hide menu and show when hovering over it
 // 1] Save modified ID, answer and species locally. and in case of an unknown ID let the user do the captcha and remember the answer.
-// 2] Auto feed pets in the background and keep a database of all pets with their food value and last time checked
-// 3] module that reads notifications with callbacks. can be used to auto accept friend requests, trade requests, etc
+// (python replaced this) 2] Auto feed pets in the background and keep a database of all pets with their food value and last time checked
 // 4] Move captcha codes list to a separate file
-// 5] Show post request error logs
-// 6] periodically save all pet ID's to a databse for option #2
 // 7] Change mass name (selected) option to just mass name while on the hatchery page
 // 8] Make it so a client can disable module
 // 9] Hide the API domain by grabbing the current URL
+// 10] Show enclosure ID of the current enclosure
+// 3] module that reads notifications with callbacks. can be used to auto accept friend requests, trade requests, etc
 
 
 // Modified ID can be used anywhere to check what species a pet is, this may be useful somewhere
@@ -518,9 +518,105 @@ class MassBreedModule extends OviPostModule {
 }
 const massBreedModule = new MassBreedModule();
 
+class CountPetsModule extends OviPostModule {
+    constructor() {
+        super('CountPets', 'Count Pets', async (callback) => {
+            const petIDs = await this.fetchPets(this.getCurrentEnclosure(), this.getFocusedUserID());
+            alert(petIDs.length + " Pets in enclosure: " + this.getCurrentEnclosure());
+            callback();
+        });
+    }
+
+    async fetchPets(enclosure, userId) {
+        const baseUrl = 'https://ovipets.com/?';
+        const params = {
+            src: 'pets',
+            sub: 'overview',
+            sec: 'pets',
+            enclosure: enclosure,
+            usr: userId,
+            '!': ''
+        };
+
+        const queryString = new URLSearchParams(params).toString();
+        const url = `${baseUrl}${queryString}`;
+
+        try {
+            const response = await fetch(url);
+
+            if (response.ok) {
+                const data = await response.json();
+                return this.handlePostResponse(data, {body: params});
+            } else {
+                console.error('Fetch failed', response.status, response.statusText);
+                this.displayErrorMessage('Network error or non-OK response status.');
+                return [];
+            }
+        } catch (error) {
+            console.error('Error making fetch request:', error);
+            this.displayErrorMessage('Error making fetch request.');
+            return [];
+        }
+    }
+
+    handlePostResponse(response, request) {
+        if (response.meta != null && response.res.includes('success')) {
+            try {
+                var cleanedResponse = response.res;
+                if (cleanedResponse.startsWith('(') && cleanedResponse.endsWith(')')) {
+                    cleanedResponse = cleanedResponse.slice(1, -1);
+                }
+
+                var parsedResponse = JSON.parse(cleanedResponse);
+                if (parsedResponse.output) {
+                    let responseText = parsedResponse.output;
+                    const petIdPattern = /PetID\[\]' value = '(\d+)/g;
+                    let petIds = [...responseText.matchAll(petIdPattern)].map(match => match[1]);
+                    return petIds;
+                }
+            } catch (e) {
+                console.error('Error parsing response:', e);
+                this.displayErrorMessage(response.res);
+                return [];
+            }
+        }
+        return [];
+    }
+
+    displayErrorMessage(message) {
+        console.error(message);
+    }
+}
+
+// Ensure the class instance is correctly named with capitalization
+const countPetsModule = new CountPetsModule();
+
+
+
+
 // ======================================================================
 // JQuery and Regex (stuff that might change over time..)
 // ======================================================================
+
+//Get the ID of the focused enclosure
+function getCurrentEnclosure(){
+    var activeEnclosureAttribute = $('.ui-tabs-tab.ui-tabs-active.ui-state-active').attr('enclosure');
+    var activeEnclosureNumber = activeEnclosureAttribute.match(/\d+/) ? activeEnclosureAttribute.match(/\d+/)[0] : null;
+    return activeEnclosureNumber
+}
+
+//Get current userID (the userID of the page currently opened, not the account that is logged in so it may grab other people's ID's if you are in their hatchery)
+function getFocusedUserID(){
+    var href = $('.tabs.left .user.avatar.trial').attr('href');
+    var userIdMatch = href.match(/usr=(\d+)/);
+
+    let userId = -1;
+    if (userIdMatch && userIdMatch.length > 1) {
+        userId = userIdMatch[1];
+    }
+
+    return userId
+}
 
 //Returns a list of PetID's of pets you currently have selected.
 function getSelectedPets() {
@@ -672,25 +768,45 @@ function displayErrorMessage(message) {
 
 if (!document.getElementById("scriptMenu")) {
     $("body").append(`
-    <div id="gmRightSideBar" style="
-        border-radius: 10px;
-        border-style: solid;
-        border-color: gray;
-        border-width: 3px;
+        <div id="gmRightSideBar" style="
+            border-radius: 10px;
+            border-style: solid;
+            border-color: gray;
+            border-width: 3px;
+            position: fixed; /* Example to make it always accessible */
+            right: 0; /* Align to the right side */
+            top: 50%; /* Position at the middle of the screen */
         ">
-        <ul id="scriptMenu">
-          <li><a id="scriptVersion">Version: ` + version + `</a></li>
-          <li><a id="statusText">Status: idle</a></li>
-          <li><a id="creditsGainedCounter">Credits Gained: 0</a></li>
-          <li><a id="postQueue">Post Queue: 0</a></li>
-          <li><a>Post Delay:  </a><input type="text" id="inpPostDelay" style="width: 40px;">
-          <input type="button" value="Save" id="btnSaveSettings" style="
-            width: 50px;
-            margin-left: 10px;
-      "></li>
-        </ul>
-    </div>
-  `);
+            <ul id="scriptMenu" style="
+                display: none; /* Hide initially */
+                list-style-type: none; /* Remove bullet points */
+                padding: 0; /* Remove padding */
+            ">
+                <li><a id="scriptVersion">Version: ` + version + `</a></li>
+                <li><a id="statusText">Status: idle</a></li>
+                <li><a id="creditsGainedCounter">Credits Gained: 0</a></li>
+                <li><a id="postQueue">Post Queue: 0</a></li>
+                <li><a>Post Delay:  </a><input type="text" id="inpPostDelay" style="width: 40px;">
+                <input type="button" value="Save" id="btnSaveSettings" style="
+                    width: 50px;
+                    margin-left: 10px;
+            "></li>
+            </ul>
+        </div>
+    `);
+
+
+    // Toggle visibility of scriptMenu on hover of gmRightSideBar
+    $("#gmRightSideBar").hover(
+        function() {
+            // Mouse enter: Show scriptMenu
+            $("#scriptMenu").stop(true, true).fadeIn();
+        },
+        function() {
+            // Mouse leave: Hide scriptMenu
+            $("#scriptMenu").stop(true, true).fadeOut();
+        }
+    );
 
     const inputElement = document.getElementById('inpPostDelay');
     const btnSaveSettings = document.getElementById('btnSaveSettings');
