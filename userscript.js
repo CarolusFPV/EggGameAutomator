@@ -12,7 +12,7 @@
 
 // Modified ID can be used anywhere to check what species a pet is, this may be useful somewhere
 
-const version = "V2.2.3";
+const version = "V2.2.4";
 
 let creditDB;
 let settingsDB;
@@ -568,20 +568,12 @@ class CountPetsModule extends OviPostModule {
         if (response.output) {
             console.log("--Success")
             try {
-                var cleanedResponse = response.output;
-                if (cleanedResponse.startsWith('(') && cleanedResponse.endsWith(')')) {
-                    cleanedResponse = cleanedResponse.slice(1, -1);
-                }
-
-                var parsedResponse = JSON.parse(cleanedResponse);
-                console.log("--parsed: ",parsedResponse)
-                if (parsedResponse.output) {
-                    let responseText = parsedResponse.output;
-                    const petIdPattern = /PetID\[\]' value = '(\d+)/g;
-                    let petIds = [...responseText.matchAll(petIdPattern)].map(match => match[1]);
-                    console.log("--pet_ids: ", petIds);
-                    return petIds;
-                }
+                let responseText = response.output;
+                const petIdPattern = /PetID\[\]' value = '(\d+)/g;
+                let petIds = [...responseText.matchAll(petIdPattern)].map(match => match[1]);
+                console.log("--pet_ids: ", petIds);
+                return petIds;
+                
             } catch (e) {
                 console.error('Error parsing response:', e);
                 this.displayErrorMessage(response.res);
