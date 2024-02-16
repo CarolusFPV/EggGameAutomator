@@ -12,7 +12,7 @@
 
 // Modified ID can be used anywhere to check what species a pet is, this may be useful somewhere
 
-const version = "V2.2.2";
+const version = "V2.2.3";
 
 let creditDB;
 let settingsDB;
@@ -564,11 +564,11 @@ class CountPetsModule extends OviPostModule {
 
     handlePostResponse(response, request) {
         console.log("--handlePostResponse: ",response);
-        console.log("--response.res: ", response.res);
-        if (response.res.includes('success')) {
+        console.log("--response.output: ", response.output)
+        if (response.output) {
             console.log("--Success")
             try {
-                var cleanedResponse = response.res;
+                var cleanedResponse = response.output;
                 if (cleanedResponse.startsWith('(') && cleanedResponse.endsWith(')')) {
                     cleanedResponse = cleanedResponse.slice(1, -1);
                 }
