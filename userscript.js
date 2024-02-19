@@ -1,16 +1,14 @@
 //Todo
-// 11] Hide menu and show when hovering over it
 // 1] Save modified ID, answer and species locally. and in case of an unknown ID let the user do the captcha and remember the answer.
-// (python replaced this) 2] Auto feed pets in the background and keep a database of all pets with their food value and last time checked
 // 4] Move captcha codes list to a separate file
 // 7] Change mass name (selected) option to just mass name while on the hatchery page
 // 8] Make it so a client can disable module
 // 9] Hide the API domain by grabbing the current URL
-// 10] Show enclosure ID of the current enclosure
 // 3] module that reads notifications with callbacks. can be used to auto accept friend requests, trade requests, etc
 
 
 // Modified ID can be used anywhere to check what species a pet is, this may be useful somewhere
+// This can also be used to check the state of an egg, the species and how far it is into hatching
 
 const version = "V2.3";
 
@@ -601,7 +599,7 @@ function getCurrentEnclosure(){
 
 //Get current userID (the userID of the page currently opened, not the account that is logged in so it may grab other people's ID's if you are in their hatchery)
 function getFocusedUserID(){
-    var href = $('.tabs.left .user.avatar.trial').attr('href');
+    var href = $('.tabs.left .user.avatar').attr('href');
     var userIdMatch = href.match(/usr=(\d+)/);
 
     let userId = -1;
