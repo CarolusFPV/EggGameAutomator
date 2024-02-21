@@ -10,7 +10,7 @@
 // Modified ID can be used anywhere to check what species a pet is, this may be useful somewhere
 // This can also be used to check the state of an egg, the species and how far it is into hatching
 
-const version = "V2.3";
+const version = "V2.3.1";
 
 let creditDB;
 let settingsDB;
@@ -317,6 +317,139 @@ class MassNameModule extends OviPostModule {
     }
 }
 const massNameModule = new MassNameModule();
+
+
+async function processPet(pet_id) {
+    try {
+        // Fetch data using the sendGet function
+        var data = await sendGet("src=pets&sub=profile&pet=" + pet_id);
+        // Extract JSON portion from the JSONP response
+        var jsonString = extractJsonFromString(data);
+        var parsedData = JSON.parse(jsonString);
+        var htmlContent = parsedData.output;
+
+        // Extract <p> content after "mutations" class and process images within
+        processImagesInMutations(pet_id, htmlContent);
+    } catch (error) {
+        console.error("Error processing data:", error);
+    }
+}
+
+function extractJsonFromString(dataString) {
+    var jsonStartPosition = dataString.indexOf("{");
+    var jsonEndPosition = dataString.lastIndexOf("}") + 1;
+    return dataString.substring(jsonStartPosition, jsonEndPosition);
+}
+
+function processImagesInMutations(pet_id, htmlContent) {
+    var pElementRegex = /class\s*=\s*"\s*mutations"\s*><p>(.*?)<\/p>/s;
+    var pElementMatch = htmlContent.match(pElementRegex);
+
+    if (pElementMatch) {
+        var imgTags = extractImagesFromContent(pElementMatch[1]);
+        logExtractedImages(pet_id,imgTags);
+    } else {
+        console.log("No <p> element found after 'mutations'.");
+    }
+}
+
+function extractImagesFromContent(content) {
+    var imgTagRegex = /<img src\s*=\s*".+?"[^>]*>/g;
+    return content.match(imgTagRegex) || [];
+}
+
+function logExtractedImages(pet_id,imgTags) {
+    var numberOfImages = imgTags.length;
+    console.log("Pet_id: ", pet_id)
+    console.log("--Number of mutations", numberOfImages);
+
+    PostQueue.push({
+        url: 'https://ovipets.com/cmd.php',
+        body: {
+            'cmd': 'pet_name',
+            'PetID': pet_id,
+            'Name': numberOfImages
+        },
+        meta: pet_id
+    });
+}
+
+var pets = [];
+$('img[width=120]').each(function () {
+    pets.push($(this).attr('src').split('pet=').pop().split('&modified').shift());
+});
+
+for (let pet of pets) {
+    processPet(pet);
+}
+
+
+///
+async function processPet(pet_id) {
+    try {
+        // Fetch data using the sendGet function
+        var data = await sendGet("src=pets&sub=profile&pet=" + pet_id);
+        // Extract JSON portion from the JSONP response
+        var jsonString = extractJsonFromString(data);
+        var parsedData = JSON.parse(jsonString);
+        var htmlContent = parsedData.output;
+
+        // Extract <p> content after "mutations" class and process images within
+        processImagesInMutations(pet_id, htmlContent);
+    } catch (error) {
+        console.error("Error processing data:", error);
+    }
+}
+
+function extractJsonFromString(dataString) {
+    var jsonStartPosition = dataString.indexOf("{");
+    var jsonEndPosition = dataString.lastIndexOf("}") + 1;
+    return dataString.substring(jsonStartPosition, jsonEndPosition);
+}
+
+function processImagesInMutations(pet_id, htmlContent) {
+    var pElementRegex = /class\s*=\s*"\s*mutations"\s*><p>(.*?)<\/p>/s;
+    var pElementMatch = htmlContent.match(pElementRegex);
+
+    if (pElementMatch) {
+        var imgTags = extractImagesFromContent(pElementMatch[1]);
+        logExtractedImages(pet_id,imgTags);
+    } else {
+        console.log("No <p> element found after 'mutations'.");
+    }
+}
+
+function extractImagesFromContent(content) {
+    var imgTagRegex = /<img src\s*=\s*".+?"[^>]*>/g;
+    return content.match(imgTagRegex) || [];
+}
+
+function logExtractedImages(pet_id,imgTags) {
+    var numberOfImages = imgTags.length;
+    console.log("Pet_id: ", pet_id)
+    console.log("--Number of mutations", numberOfImages);
+
+    PostQueue.push({
+        url: 'https://ovipets.com/cmd.php',
+        body: {
+            'cmd': 'pet_name',
+            'PetID': pet_id,
+            'Name': numberOfImages
+        },
+        meta: pet_id
+    });
+}
+
+var pets = [];
+$('img[width=120]').each(function () {
+    pets.push($(this).attr('src').split('pet=').pop().split('&modified').shift());
+});
+
+for (let pet of pets) {
+    processPet(pet);
+}
+///
+
 
 //Systematically check page for Tattoo Update button in order to grab Tattoo data
 setInterval(function () {
