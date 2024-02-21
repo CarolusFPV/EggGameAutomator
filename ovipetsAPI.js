@@ -383,7 +383,7 @@ function handlePostResponse(response, request) {
                 if (parsedResponse.message) {
                     if (parsedResponse.message.includes('The answer is incorrect')) {
                         turnCaptchaEgg(request.body.PetID);
-                    } else if(!parsedResponse.message.toLowerCase().includes("you can't turn turn") && !parsedResponse.message.toLowerCase().includes("only the owner can hatch")){
+                    } else if(!parsedResponse.message.toLowerCase().includes("you can't turn the egg at this time") && !parsedResponse.message.toLowerCase().includes("only the owner can hatch")){
                         displayErrorMessage(JSON.stringify(request.body) + " => " + parsedResponse.message);
                     }
                 }
