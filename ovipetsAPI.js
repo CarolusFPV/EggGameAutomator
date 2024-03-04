@@ -38,12 +38,12 @@ class CaptchaSolver {
 
 const captchaCodes = [
     new CaptchaSolver("1702424664", "Canis", 23),
-    new CaptchaSolver("1614919856", "Draconis", 3),
+    new CaptchaSolver("1709290704", "Draconis", 3),
     new CaptchaSolver("1701390206", "Equus", 21),
-    new CaptchaSolver("1705657317", "Feline", 2),
+    new CaptchaSolver("1709290271", "Feline", 2),
     new CaptchaSolver("1688169852", "Gekko", 15),
-    new CaptchaSolver("1701390507", "Lupus", 6),
-    new CaptchaSolver("1682925936", "Mantis", 37),
+    new CaptchaSolver("1708563069", "Lupus", 6),
+    new CaptchaSolver("1709289882", "Mantis", 37),
     new CaptchaSolver("1701390338", "Raptor", 30),
     new CaptchaSolver("1701390267", "Slime", 35),
     new CaptchaSolver("1702424735", "Vulpes", 19)
