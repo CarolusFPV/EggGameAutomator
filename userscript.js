@@ -233,19 +233,46 @@ class TurnEggsQuickModule extends OviPostModule {
     async getEggs(userID) {
         console.log("Get Eggs: " + userID);
         const response = await sendGet("src=pets&sub=hatchery&usr=" + userID);
+        downloadLogToFile("Response: " + response)
         var eggs = [];
         response.split('Turn Egg').forEach(function (egg) {
+            console.log("Egg split: ",egg)
             if (!(egg.includes('to avoid') || egg.includes('exectime'))) {
                 egg = egg.split('pet=').pop().split('&').shift();
                 if (egg.length <= 10) {
                     eggs.push(egg);
                 }
+            }else{
+                console.log("--Egg contains to avoid or exectime usr: ", userID)
             }
         });
         return eggs;
     }
 }
+
 const turnEggsQuickModule = new TurnEggsQuickModule();
+function downloadLogToFile(logMessage) {
+    // Create a blob with your log message
+    const blob = new Blob([logMessage], { type: 'text/plain' });
+
+    // Create a link element
+    const link = document.createElement('a');
+
+    // Set the link's href to point to the blob
+    link.href = URL.createObjectURL(blob);
+
+    // Set the download attribute to the desired file name
+    link.download = 'log.txt';
+
+    // Append the link to the document body
+    document.body.appendChild(link);
+
+    // Programmatically click the link to trigger the download
+    link.click();
+
+    // Remove the link from the document
+    document.body.removeChild(link);
+}
 
 class HatchEggsModule extends OviPostModule {
     constructor() {
