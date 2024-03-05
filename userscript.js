@@ -244,6 +244,7 @@ class TurnEggsQuickModule extends OviPostModule {
                 }
             }else{
                 console.log("--Egg contains to avoid or exectime usr: ", userID)
+                console.log(" ")
             }
         });
         return eggs;
