@@ -10,7 +10,7 @@
 // Modified ID can be used anywhere to check what species a pet is, this may be useful somewhere
 // This can also be used to check the state of an egg, the species and how far it is into hatching
 
-const version = "V2.3.4";
+const version = "V2.4.0";
 
 let creditDB;
 let settingsDB;
@@ -89,22 +89,22 @@ class TurnEggsModule extends OviPostModule {
         const response = await sendGet("src=pets&sub=hatchery&usr=" + userID);
         var eggs = [];
         response.split('Turn Egg').forEach(function (egg) {
-            if (!egg.includes('to avoid automatic discard') && !egg.includes('exectime') && !egg.includes('Hatch Egg') && !egg.includes('{"type":"src"')) {
-                let valueStart = egg.indexOf("value = '");
-                if (valueStart !== -1) {
-                    let valueEnd = egg.indexOf("' style =", valueStart);
-                    if (valueEnd !== -1) {
-                        let eggValue = egg.substring(valueStart + "value = '".length, valueEnd);
-                        if (eggValue.length <= 10) {
-                            eggs.push(eggValue);
-                        }
+            if (!(egg.includes('to avoid') || egg.includes('jQuery'))) {
+                let match = egg.match(/pet=([^\\]+)/);
+                if (match) {
+                    egg = match[1];
+                    if (egg.length <= 10) {
+                        eggs.push(egg);
                     }
                 }
+                
             }
         });
+        if(eggs){
+            console.log("Turned eggs for: https://ovipets.com/#!/?src=pets&sub=hatchery&usr=" + userID)
+        }
         return eggs;
     }
-    
 }
 const turnEggsModule = new TurnEggsModule();
 
@@ -235,45 +235,25 @@ class TurnEggsQuickModule extends OviPostModule {
         const response = await sendGet("src=pets&sub=hatchery&usr=" + userID);
         var eggs = [];
         response.split('Turn Egg').forEach(function (egg) {
-            console.log("Egg split: ",egg)
             if (!(egg.includes('to avoid') || egg.includes('jQuery'))) {
-                egg = egg.split('pet=').pop().split('&').shift();
-                if (egg.length <= 10) {
-                    eggs.push(egg);
+                let match = egg.match(/pet=([^\\]+)/);
+                if (match) {
+                    egg = match[1];
+                    if (egg.length <= 10) {
+                        eggs.push(egg);
+                    }
                 }
+                
             }
         });
         if(eggs){
             console.log("Turned eggs for: https://ovipets.com/#!/?src=pets&sub=hatchery&usr=" + userID)
-            downloadLogToFile(response, userID)
         }
         return eggs;
     }
 }
 
 const turnEggsQuickModule = new TurnEggsQuickModule();
-function downloadLogToFile(logMessage, filename) {
-    // Create a blob with your log message
-    const blob = new Blob([logMessage], { type: 'text/plain' });
-
-    // Create a link element
-    const link = document.createElement('a');
-
-    // Set the link's href to point to the blob
-    link.href = URL.createObjectURL(blob);
-
-    // Set the download attribute to the desired file name
-    link.download = filename + '.txt';
-
-    // Append the link to the document body
-    document.body.appendChild(link);
-
-    // Programmatically click the link to trigger the download
-    link.click();
-
-    // Remove the link from the document
-    document.body.removeChild(link);
-}
 
 class HatchEggsModule extends OviPostModule {
     constructor() {
