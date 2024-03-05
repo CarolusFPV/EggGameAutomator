@@ -10,7 +10,7 @@
 // Modified ID can be used anywhere to check what species a pet is, this may be useful somewhere
 // This can also be used to check the state of an egg, the species and how far it is into hatching
 
-const version = "V2.3.3";
+const version = "V2.3.4";
 
 let creditDB;
 let settingsDB;
@@ -233,26 +233,26 @@ class TurnEggsQuickModule extends OviPostModule {
     async getEggs(userID) {
         console.log("Get Eggs: " + userID);
         const response = await sendGet("src=pets&sub=hatchery&usr=" + userID);
-        downloadLogToFile("Response: " + response)
         var eggs = [];
         response.split('Turn Egg').forEach(function (egg) {
             console.log("Egg split: ",egg)
-            if (!(egg.includes('to avoid') || egg.includes('exectime'))) {
+            if (!(egg.includes('to avoid') || egg.includes('jQuery'))) {
                 egg = egg.split('pet=').pop().split('&').shift();
                 if (egg.length <= 10) {
                     eggs.push(egg);
                 }
-            }else{
-                console.log("--Egg contains to avoid or exectime usr: ", userID)
-                console.log(" ")
             }
         });
+        if(eggs){
+            console.log("Turned eggs for: https://ovipets.com/#!/?src=pets&sub=hatchery&usr=" + userID)
+            downloadLogToFile(response, userID)
+        }
         return eggs;
     }
 }
 
 const turnEggsQuickModule = new TurnEggsQuickModule();
-function downloadLogToFile(logMessage) {
+function downloadLogToFile(logMessage, filename) {
     // Create a blob with your log message
     const blob = new Blob([logMessage], { type: 'text/plain' });
 
@@ -263,7 +263,7 @@ function downloadLogToFile(logMessage) {
     link.href = URL.createObjectURL(blob);
 
     // Set the download attribute to the desired file name
-    link.download = 'log.txt';
+    link.download = filename + '.txt';
 
     // Append the link to the document body
     document.body.appendChild(link);
