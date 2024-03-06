@@ -73,9 +73,6 @@ async function getFriendList() {
             }
         });
         console.log('page: ' + page + ' friends: ' + friends.length);
-        if (response.includes('label = \\\"Previous')) {
-            break;
-        }
     }
 
     // Randomize the friends array
