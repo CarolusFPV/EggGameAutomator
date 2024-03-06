@@ -61,6 +61,32 @@ function getUserID() {
     return $($('.links')[0]).find('a')[0].href.split('usr=').pop();
 }
 
+async function getFriendList() {
+    var friends = [];
+    var ownID = getUserID();
+    for (let page = 1; page < 10; page++) {
+        const response = await sendGet("src=events&sub=feed&sec=friends&filter=all&Filter=all&page=" + page);
+        response.split('usr=').forEach(function (friend) {
+            friend = friend.split('&amp').shift().split('\\').shift();
+            if (friend.length <= 20 && friend !== ownID && !friends.includes(friend)) {
+                friends.push(friend);
+            }
+        });
+        console.log('page: ' + page + ' friends: ' + friends.length);
+        if (response.includes('label = \\\"Previous')) {
+            break;
+        }
+    }
+
+    // Randomize the friends array
+    for (let i = friends.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [friends[i], friends[j]] = [friends[j], friends[i]];
+    }
+
+    return friends;
+}
+
 // Name unnamed pet
 function namePet(PetID, Name) {
     PostQueue.push({

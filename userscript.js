@@ -34,7 +34,7 @@ class TurnEggsModule extends OviPostModule {
     async turnEggs(callback) {
         creditsEarned = 0;
         startTime = Date.now();
-        const friends = await this.getFriendList();
+        const friends = await getFriendList();
         var eggCounter = 0;
         var friendCounter = 0;
 
@@ -56,32 +56,6 @@ class TurnEggsModule extends OviPostModule {
 
         setStatus("idle");
         callback();
-    }
-
-    async getFriendList() {
-        var friends = [];
-        var ownID = getUserID();
-        for (let page = 1; page < 20; page++) {
-            const response = await sendGet("src=events&sub=feed&sec=friends&filter=all&Filter=all&page=" + page);
-            response.split('usr=').forEach(function (friend) {
-                friend = friend.split('&amp').shift().split('\\').shift();
-                if (friend.length <= 20 && friend !== ownID && !friends.includes(friend)) {
-                    friends.push(friend);
-                }
-            });
-            console.log('page: ' + page + ' friends: ' + friends.length);
-            if (response.includes('label = \\\"Previous')) {
-                break;
-            }
-        }
-
-        // Randomize the friends array
-        for (let i = friends.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [friends[i], friends[j]] = [friends[j], friends[i]];
-        }
-
-        return friends;
     }
 
     async getEggs(userID) {
