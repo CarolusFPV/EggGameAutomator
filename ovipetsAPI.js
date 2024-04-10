@@ -239,6 +239,7 @@ async function turnCaptchaEgg(PetID, meta = null) {
             if (!captcha) {
                 console.log("Modified value [" + modifiedValue + "] is not known")
                 console.log("Error, URL: " + "https://ovipets.com/#!/?src=pets&sub=profile&pet=" + PetID)
+				alert("Modified value [" + modifiedValue + "] is not known. Cannot solve captcha for this pet..")
                 return;
             }
 
