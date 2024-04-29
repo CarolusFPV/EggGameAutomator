@@ -65,7 +65,7 @@ async function getFriendList() {
     var friends = [];
     var ownID = getUserID();
     for (let page = 1; page < 10; page++) {
-        const response = await sendGet("src=events&sub=feed&sec=friends&filter=all&Filter=all&page=" + page);
+        const response = await sendGet("src=events&sub=feed&sec=friends&page=" + page); //&filter=all&Filter=all <- ah yes, makes perfect sense. When we want to see all friends, we filter 'all'. when we want to filter out only favorites, we do not add a filter
         response.split('usr=').forEach(function (friend) {
             friend = friend.split('&amp').shift().split('\\').shift();
             if (friend.length <= 20 && friend !== ownID && !friends.includes(friend)) {
