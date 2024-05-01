@@ -38,7 +38,7 @@ class CaptchaSolver {
 
 const captchaCodes = [
     new CaptchaSolver("1702424664", "Canis", 23),
-    new CaptchaSolver("1713172639", "Draconis", 3),
+    new CaptchaSolver("1714552580", "Draconis", 3),
     new CaptchaSolver("1701390206", "Equus", 21),
     new CaptchaSolver("1709290271", "Feline", 2),
     new CaptchaSolver("1688169852", "Gekko", 15),
