@@ -214,7 +214,7 @@ async function turnCaptchaEgg(PetID, meta = null) {
     var imageUrl;
 
     if (match && match[1]) {
-        imageUrl = match[1].replace(/\\&quot;/g, '"');
+        imageUrl = "https:" + match[1].replace(/\\&quot;/g, '"').replace(/&amp;/g, '&');
     }
 
     if (imageUrl) {
