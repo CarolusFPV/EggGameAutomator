@@ -29,28 +29,29 @@ class OviPostModule {
 
 
 class CaptchaSolver {
-    constructor(id, species, answer) {
-        this.id = id;
+    constructor(species, answer) {
         this.species = species;
         this.answer = answer;
     }
 }
 
+const speciesList = ["Canis", "Draconis", "Equus", "Feline", "Gekko", "Lupus", "Mantis", "Raptor", "Slime", "Vulpes"];
+
 const captchaCodes = [
-    new CaptchaSolver("1702424664", "Canis", 23),
-    new CaptchaSolver("1713172639", "Draconis", 3),
-    new CaptchaSolver("1701390206", "Equus", 21),
-    new CaptchaSolver("1709290271", "Feline", 2),
-    new CaptchaSolver("1688169852", "Gekko", 15),
-    new CaptchaSolver("1713185680", "Lupus", 6),
-    new CaptchaSolver("1709289882", "Mantis", 37),
-    new CaptchaSolver("1701390338", "Raptor", 30),
-    new CaptchaSolver("1711970039", "Slime", 35),
-    new CaptchaSolver("1702424735", "Vulpes", 19)
+    new CaptchaSolver("Canis", 23),
+    new CaptchaSolver("Draconis", 3),
+    new CaptchaSolver("Equus", 21),
+    new CaptchaSolver("Feline", 2),
+    new CaptchaSolver("Gekko", 15),
+    new CaptchaSolver("Lupus", 6),
+    new CaptchaSolver("Mantis", 37),
+    new CaptchaSolver("Raptor", 30),
+    new CaptchaSolver("Slime", 35),
+    new CaptchaSolver("Vulpes", 19)
 ];
 
-function findCaptchaById(id) {
-    return captchaCodes.find((captcha) => captcha.id === id);
+async function findCaptchaById(dbHandler, id) {
+    return await dbHandler.read(id);
 }
 
 function setStatus(newStatus) {
@@ -184,11 +185,9 @@ async function turnCaptchaEgg(PetID, meta = null) {
     var jsonObject = JSON.parse(json);
     var htmlString = jsonObject.output;
 
-    // Find the index where "Solve the following to earn" starts
     let startIndex = htmlString.indexOf("Solve the following to earn");
     let subString;
 
-    // If the phrase is found, create a substring starting from that phrase
     if (startIndex !== -1) {
         subString = htmlString.substring(startIndex);
     } else {
@@ -196,7 +195,6 @@ async function turnCaptchaEgg(PetID, meta = null) {
         return;
     }
 
-    // Use regex to find the title attribute with credits
     let creditsRegex = /title\s*=\s*\\'(\d+)\s*Credit/g;
     let creditsMatch = creditsRegex.exec(subString);
     let credits = 0;
@@ -211,7 +209,6 @@ async function turnCaptchaEgg(PetID, meta = null) {
         $("#creditsGainedCounter")[0].innerHTML = "Credits Gained: " + creditsEarned + " (" + creditsPerMinute + " c/m)";
     }
 
-    // Use regex to find the img src within the action attribute
     var regex = /img src = \\&quot;(.*?)\\&quot; title = \\&quot;Name the Species/g;
     var match = regex.exec(htmlString);
     var imageUrl;
@@ -221,8 +218,6 @@ async function turnCaptchaEgg(PetID, meta = null) {
     }
 
     if (imageUrl) {
-
-        // Use regex to find the modified value
         var modifiedRegex = /modified=(\d+)/;
         var modifiedMatch = modifiedRegex.exec(imageUrl);
 
@@ -233,33 +228,84 @@ async function turnCaptchaEgg(PetID, meta = null) {
                 console.log("Couldn't find modified value in: " + modifiedMatch);
             }
 
-            const captcha = findCaptchaById(modifiedValue);
+            const dbHandler = new DatabaseHandler('CaptchaDB', 'CaptchaStore');
+            await dbHandler.openDatabase();
+            const captcha = await findCaptchaById(dbHandler, modifiedValue);
 
-            //Show in console if modified value is unknown.
             if (!captcha) {
-                console.log("Modified value [" + modifiedValue + "] is not known")
-                console.log("Error, URL: " + "https://ovipets.com/#!/?src=pets&sub=profile&pet=" + PetID)
-				alert("Modified value [" + modifiedValue + "] is not known. Cannot solve captcha for this pet..")
-                return;
-            }
+                console.log("Modified value [" + modifiedValue + "] is not known");
+                console.log("Error, URL: " + "https://ovipets.com/#!/?src=pets&sub=profile&pet=" + PetID);
 
-            let answer = captcha.answer;
-            let species = captcha.species
-
-            if (answer && species) {
-                console.log('--Question PetID: ' + PetID + ' Species: ' + species + " modifiedID: " + modifiedValue + " Answer Value: " + answer + " Credits: " + credits + " Total Credits Earned: " + creditsEarned);
-                addToUserCredits(userID, credits);
-                turnEgg(PetID, meta, answer);
-                let creditsOnPage = getCurrentCredits();
-                updateCredits(creditsOnPage + credits);
+                const species = await getSpeciesFromUser(imageUrl);
+                await dbHandler.write(modifiedValue, new CaptchaSolver(species, captchaCodes.find(c => c.species === species).answer));
+                alert("New species ID stored: " + species + " with ID: " + modifiedValue);
             } else {
-                alert("Couldn't solve captcha. PetID: " + PetID + " Species: " + species + " answer: " + answer + " modifiedID: " + modifiedValue);
-                console.log("--Couldn't solve captcha. PetID: " + PetID + " Species: " + species + " answer: " + answer + " modifiedID: " + modifiedValue);
+                let answer = captcha.answer;
+                let species = captcha.species;
+
+                if (answer && species) {
+                    console.log('--Question PetID: ' + PetID + ' Species: ' + species + " modifiedID: " + modifiedValue + " Answer Value: " + answer + " Credits: " + credits + " Total Credits Earned: " + creditsEarned);
+                    addToUserCredits(userID, credits);
+                    turnEgg(PetID, meta, answer);
+                    let creditsOnPage = getCurrentCredits();
+                    updateCredits(creditsOnPage + credits);
+                } else {
+                    alert("Couldn't solve captcha. PetID: " + PetID + " Species: " + species + " answer: " + answer + " modifiedID: " + modifiedValue);
+                    console.log("--Couldn't solve captcha. PetID: " + PetID + " Species: " + species + " answer: " + answer + " modifiedID: " + modifiedValue);
+                }
             }
         }
     } else {
         console.log("Couldn't find question");
     }
+}
+
+// Called when unknown modified ID is found, this prompts the user to solve the captcha.
+async function getSpeciesFromUser(imageUrl) {
+    return new Promise((resolve) => {
+        const modal = document.createElement('div');
+        modal.style.position = 'fixed';
+        modal.style.top = '0';
+        modal.style.left = '0';
+        modal.style.width = '100%';
+        modal.style.height = '100%';
+        modal.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+        modal.style.display = 'flex';
+        modal.style.justifyContent = 'center';
+        modal.style.alignItems = 'center';
+        modal.style.zIndex = '1000';
+
+        const content = document.createElement('div');
+        content.style.backgroundColor = 'white';
+        content.style.padding = '20px';
+        content.style.borderRadius = '10px';
+        content.style.textAlign = 'center';
+
+        const img = document.createElement('img');
+        img.src = imageUrl;
+        img.style.maxWidth = '100%';
+        img.style.marginBottom = '20px';
+
+        const prompt = document.createElement('p');
+        prompt.textContent = 'Select the species for this image:';
+
+        content.appendChild(img);
+        content.appendChild(prompt);
+
+        speciesList.forEach(species => {
+            const button = document.createElement('button');
+            button.textContent = species;
+            button.style.margin = '5px';
+            button.onclick = () => {
+                document.body.removeChild(modal);
+                resolve(species);
+            };
+            content.appendChild(button);
+        });
+
+        modal.appendChild(content);
+        document.body.appendChild(modal);
+    });
 }
 
 function sendPetToAdoptionCenter(PetID) {
