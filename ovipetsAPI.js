@@ -235,6 +235,7 @@ async function turnCaptchaEgg(PetID, meta = null) {
             if (!captcha) {
                 console.log("Modified value [" + modifiedValue + "] is not known");
                 console.log("Error, URL: " + "https://ovipets.com/#!/?src=pets&sub=profile&pet=" + PetID);
+                console.log("image: " + imageUrl);
 
                 const species = await getSpeciesFromUser(imageUrl);
                 await dbHandler.write(modifiedValue, new CaptchaSolver(species, captchaCodes.find(c => c.species === species).answer));
