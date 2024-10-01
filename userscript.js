@@ -10,7 +10,7 @@
 // Modified ID can be used anywhere to check what species a pet is, this may be useful somewhere
 // This can also be used to check the state of an egg, the species and how far it is into hatching
 
-const version = "V2.5.2";
+const version = "V2.6.0";
 
 let creditDB;
 let settingsDB;
